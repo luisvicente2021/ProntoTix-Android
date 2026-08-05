@@ -12,6 +12,7 @@ import androidx.navigation.navArgument
 import com.luisvicente.prontotix.ui.login.LoginScreen
 import com.luisvicente.prontotix.ui.ticketdetail.TicketDetailScreen
 import com.luisvicente.prontotix.ui.tickets.TicketsListScreen
+import com.luisvicente.prontotix.ui.deliveryreport.DeliveryReportScreen
 
 @Composable
 fun AppNavigation(
@@ -77,6 +78,32 @@ fun AppNavigation(
                     navController.previousBackStackEntry
                         ?.savedStateHandle
                         ?.set("refresh_tickets", true)
+                },
+                onOpenDeliveryReport = {
+                    navController.navigate(
+                        AppRoute.deliveryReport(ticketId)
+                    )
+                }
+            )
+        }
+
+        composable(
+            route = AppRoute.DELIVERY_REPORT,
+            arguments = listOf(
+                navArgument("ticketId") {
+                    type = NavType.LongType
+                }
+            )
+        ) { backStackEntry ->
+
+            val ticketId = backStackEntry.arguments
+                ?.getLong("ticketId")
+                ?: return@composable
+
+            DeliveryReportScreen(
+                ticketId = ticketId,
+                onBack = {
+                    navController.popBackStack()
                 }
             )
         }

@@ -8,4 +8,10 @@ object AppRoute {
     fun ticketDetail(ticketId: Long): String {
         return "ticket_detail/$ticketId"
     }
+
+    const val DELIVERY_REPORT = "delivery_report/{ticketId}"
+
+    fun deliveryReport(ticketId: Long): String {
+        return "delivery_report/$ticketId"
+    }
 }

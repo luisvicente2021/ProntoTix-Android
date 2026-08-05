@@ -42,7 +42,8 @@ import com.luisvicente.prontotix.data.model.Ticket
 fun TicketDetailScreen(
     ticketId: Long,
     onBack: () -> Unit,
-    onStatusUpdated: () -> Unit
+    onStatusUpdated: () -> Unit,
+    onOpenDeliveryReport: () -> Unit
 ) {
     val context = LocalContext.current
 
@@ -136,6 +137,7 @@ fun TicketDetailScreen(
                     onChangeStatus = {
                         showStatusDialog = true
                     },
+                    onOpenDeliveryReport = onOpenDeliveryReport,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(paddingValues)
@@ -165,8 +167,9 @@ private fun TicketDetailContent(
     successMessage: String?,
     errorMessage: String?,
     onChangeStatus: () -> Unit,
+    onOpenDeliveryReport: () -> Unit,
     modifier: Modifier = Modifier
-) {
+){
     Column(
         modifier = modifier
             .verticalScroll(rememberScrollState())
@@ -300,9 +303,7 @@ private fun TicketDetailContent(
         Spacer(modifier = Modifier.height(12.dp))
 
         Button(
-            onClick = {
-                // Aquí agregaremos el reporte de entrega.
-            },
+            onClick = onOpenDeliveryReport,
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Agregar reporte de entrega")
