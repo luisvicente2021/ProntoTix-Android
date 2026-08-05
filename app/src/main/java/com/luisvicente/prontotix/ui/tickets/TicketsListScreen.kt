@@ -1,4 +1,5 @@
 package com.luisvicente.prontotix.ui.tickets
+import androidx.compose.runtime.LaunchedEffect
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -36,6 +37,8 @@ import com.luisvicente.prontotix.data.model.Ticket
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TicketsListScreen(
+    refreshTrigger: Boolean = false,
+    onRefreshHandled: () -> Unit = {},
     onTicketClick: (Long) -> Unit = {},
     onCreateTicket: () -> Unit = {}
 ) {
@@ -50,6 +53,13 @@ fun TicketsListScreen(
     )
 
     val uiState by ticketsViewModel.uiState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(refreshTrigger) {
+        if (refreshTrigger) {
+            ticketsViewModel.loadTickets()
+            onRefreshHandled()
+        }
+    }
 
     Scaffold(
         topBar = {

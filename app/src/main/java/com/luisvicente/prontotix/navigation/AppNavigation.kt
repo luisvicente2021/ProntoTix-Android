@@ -1,6 +1,8 @@
 package com.luisvicente.prontotix.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -13,8 +15,7 @@ import com.luisvicente.prontotix.ui.tickets.TicketsListScreen
 
 @Composable
 fun AppNavigation(
-    navController: NavHostController =
-        rememberNavController()
+    navController: NavHostController = rememberNavController()
 ) {
     NavHost(
         navController = navController,
@@ -23,9 +24,7 @@ fun AppNavigation(
         composable(AppRoute.LOGIN) {
             LoginScreen(
                 onLoginSuccess = {
-                    navController.navigate(
-                        AppRoute.TICKETS
-                    ) {
+                    navController.navigate(AppRoute.TICKETS) {
                         popUpTo(AppRoute.LOGIN) {
                             inclusive = true
                         }
@@ -34,8 +33,20 @@ fun AppNavigation(
             )
         }
 
-        composable(AppRoute.TICKETS) {
+        composable(AppRoute.TICKETS) { backStackEntry ->
+
+            val shouldRefresh by backStackEntry
+                .savedStateHandle
+                .getStateFlow("refresh_tickets", false)
+                .collectAsStateWithLifecycle()
+
             TicketsListScreen(
+                refreshTrigger = shouldRefresh,
+                onRefreshHandled = {
+                    backStackEntry.savedStateHandle[
+                        "refresh_tickets"
+                    ] = false
+                },
                 onTicketClick = { ticketId ->
                     navController.navigate(
                         AppRoute.ticketDetail(ticketId)
@@ -53,15 +64,19 @@ fun AppNavigation(
             )
         ) { backStackEntry ->
 
-            val ticketId =
-                backStackEntry.arguments
-                    ?.getLong("ticketId")
-                    ?: return@composable
+            val ticketId = backStackEntry.arguments
+                ?.getLong("ticketId")
+                ?: return@composable
 
             TicketDetailScreen(
                 ticketId = ticketId,
                 onBack = {
                     navController.popBackStack()
+                },
+                onStatusUpdated = {
+                    navController.previousBackStackEntry
+                        ?.savedStateHandle
+                        ?.set("refresh_tickets", true)
                 }
             )
         }

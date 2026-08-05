@@ -10,17 +10,23 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -35,7 +41,8 @@ import com.luisvicente.prontotix.data.model.Ticket
 @Composable
 fun TicketDetailScreen(
     ticketId: Long,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onStatusUpdated: () -> Unit
 ) {
     val context = LocalContext.current
 
@@ -52,11 +59,21 @@ fun TicketDetailScreen(
     val uiState by
     detailViewModel.uiState.collectAsStateWithLifecycle()
 
+    var showStatusDialog by remember {
+        mutableStateOf(false)
+    }
+
+    LaunchedEffect(uiState.successMessage) {
+        if (uiState.successMessage != null) {
+            onStatusUpdated()
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
-                    Text("Detalle del ticket")
+                    Text("Detalle de la asignación")
                 },
                 navigationIcon = {
                     TextButton(
@@ -75,25 +92,23 @@ fun TicketDetailScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(paddingValues),
-                    verticalArrangement =
-                        Arrangement.Center,
-                    horizontalAlignment =
-                        Alignment.CenterHorizontally
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     CircularProgressIndicator()
                 }
             }
 
-            uiState.errorMessage != null -> {
+            uiState.errorMessage != null &&
+                    uiState.ticket == null -> {
+
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(paddingValues)
                         .padding(24.dp),
-                    verticalArrangement =
-                        Arrangement.Center,
-                    horizontalAlignment =
-                        Alignment.CenterHorizontally
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
                         text = uiState.errorMessage.orEmpty(),
@@ -105,8 +120,7 @@ fun TicketDetailScreen(
                     )
 
                     Button(
-                        onClick =
-                            detailViewModel::loadTicket
+                        onClick = detailViewModel::loadTicket
                     ) {
                         Text("Reintentar")
                     }
@@ -116,6 +130,12 @@ fun TicketDetailScreen(
             uiState.ticket != null -> {
                 TicketDetailContent(
                     ticket = uiState.ticket!!,
+                    isUpdatingStatus = uiState.isUpdatingStatus,
+                    successMessage = uiState.successMessage,
+                    errorMessage = uiState.errorMessage,
+                    onChangeStatus = {
+                        showStatusDialog = true
+                    },
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(paddingValues)
@@ -123,11 +143,28 @@ fun TicketDetailScreen(
             }
         }
     }
+
+    if (showStatusDialog) {
+        StatusDialog(
+            currentStatus = uiState.ticket?.status,
+            onDismiss = {
+                showStatusDialog = false
+            },
+            onStatusSelected = { status ->
+                showStatusDialog = false
+                detailViewModel.updateStatus(status)
+            }
+        )
+    }
 }
 
 @Composable
 private fun TicketDetailContent(
     ticket: Ticket,
+    isUpdatingStatus: Boolean,
+    successMessage: String?,
+    errorMessage: String?,
+    onChangeStatus: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -136,7 +173,7 @@ private fun TicketDetailContent(
             .padding(16.dp)
     ) {
         Text(
-            text = ticket.title ?: "Ticket sin título",
+            text = ticket.title ?: "Asignación sin título",
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold
         )
@@ -158,7 +195,9 @@ private fun TicketDetailContent(
 
             DetailField(
                 label = "Estado",
-                value = ticket.status
+                value = statusLabel(
+                    ticket.status ?: "Sin estado"
+                )
             )
 
             DetailField(
@@ -226,24 +265,47 @@ private fun TicketDetailContent(
 
         Spacer(modifier = Modifier.height(24.dp))
 
+        successMessage?.let { message ->
+            Text(
+                text = message,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+
+        errorMessage?.let { message ->
+            Text(
+                text = message,
+                color = MaterialTheme.colorScheme.error,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+
         Button(
-            onClick = {
-                // En el siguiente paso cambiaremos el estado.
-            },
+            onClick = onChangeStatus,
+            enabled = !isUpdatingStatus,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Cambiar estado")
+            if (isUpdatingStatus) {
+                CircularProgressIndicator()
+            } else {
+                Text("Cambiar estado")
+            }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
 
         Button(
             onClick = {
-                // Después agregaremos notas y reporte técnico.
+                // Aquí agregaremos el reporte de entrega.
             },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Agregar nota o reporte")
+            Text("Agregar reporte de entrega")
         }
     }
 }
@@ -290,6 +352,63 @@ private fun DetailField(
 
             Text(text = value)
         }
+    }
+}
+
+@Composable
+private fun StatusDialog(
+    currentStatus: String?,
+    onDismiss: () -> Unit,
+    onStatusSelected: (String) -> Unit
+) {
+    val statuses = listOf(
+        "Abierta",
+        "En Proceso",
+        "Cerrada"
+    )
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text("Cambiar estado")
+        },
+        text = {
+            Column(
+                verticalArrangement =
+                    Arrangement.spacedBy(8.dp)
+            ) {
+                statuses.forEach { status ->
+                    OutlinedButton(
+                        onClick = {
+                            onStatusSelected(status)
+                        },
+                        enabled = status != currentStatus,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = statusLabel(status)
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss
+            ) {
+                Text("Cancelar")
+            }
+        }
+    )
+}
+
+private fun statusLabel(status: String): String {
+    return when (status) {
+        "Abierta" -> "Abierto"
+        "En Proceso" -> "En progreso"
+        "Cerrada" -> "Terminada"
+        else -> status
     }
 }
 
