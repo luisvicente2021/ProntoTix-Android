@@ -30,6 +30,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.luisvicente.prontotix.data.local.SessionManager
 import com.luisvicente.prontotix.data.model.Ticket
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,6 +57,10 @@ fun TicketDetailScreen(
     val uiState by
     detailViewModel.uiState.collectAsStateWithLifecycle()
 
+    var showStatusDialog by remember {
+        mutableStateOf(false)
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -68,7 +77,18 @@ fun TicketDetailScreen(
             )
         }
     ) { paddingValues ->
-
+        if (showStatusDialog) {
+            StatusDialog(
+                currentStatus = uiState.ticket?.status,
+                onDismiss = {
+                    showStatusDialog = false
+                },
+                onStatusSelected = { status ->
+                    showStatusDialog = false
+                    detailViewModel.updateStatus(status)
+                }
+            )
+        }
         when {
             uiState.isLoading -> {
                 Column(
@@ -116,6 +136,11 @@ fun TicketDetailScreen(
             uiState.ticket != null -> {
                 TicketDetailContent(
                     ticket = uiState.ticket!!,
+                    isUpdatingStatus = uiState.isUpdatingStatus,
+                    successMessage = uiState.successMessage,
+                    onChangeStatus = {
+                        showStatusDialog = true
+                    },
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(paddingValues)
@@ -128,6 +153,9 @@ fun TicketDetailScreen(
 @Composable
 private fun TicketDetailContent(
     ticket: Ticket,
+    isUpdatingStatus: Boolean,
+    successMessage: String?,
+    onChangeStatus: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -158,7 +186,9 @@ private fun TicketDetailContent(
 
             DetailField(
                 label = "Estado",
-                value = ticket.status
+                value = statusLabel(
+                    ticket.status ?: "Sin estado"
+                )
             )
 
             DetailField(
@@ -226,24 +256,37 @@ private fun TicketDetailContent(
 
         Spacer(modifier = Modifier.height(24.dp))
 
+        successMessage?.let { message ->
+            Text(
+                text = message,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+
         Button(
-            onClick = {
-                // En el siguiente paso cambiaremos el estado.
-            },
+            onClick = onChangeStatus,
+            enabled = !isUpdatingStatus,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Cambiar estado")
+            if (isUpdatingStatus) {
+                CircularProgressIndicator()
+            } else {
+                Text("Cambiar estado")
+            }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
 
         Button(
             onClick = {
-                // Después agregaremos notas y reporte técnico.
+                // Después agregaremos el reporte de entrega.
             },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Agregar nota o reporte")
+            Text("Agregar reporte de entrega")
         }
     }
 }
@@ -316,5 +359,62 @@ private fun formatTicketDate(
         formatter.format(instant)
     } catch (_: Exception) {
         date
+    }
+}
+
+
+@Composable
+private fun StatusDialog(
+    currentStatus: String?,
+    onDismiss: () -> Unit,
+    onStatusSelected: (String) -> Unit
+) {
+    val statuses = listOf(
+        "Abierta",
+        "En Proceso",
+        "Cerrada"
+    )
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text("Cambiar estado")
+        },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                statuses.forEach { status ->
+                    OutlinedButton(
+                        onClick = {
+                            onStatusSelected(status)
+                        },
+                        enabled = status != currentStatus,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = statusLabel(status)
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss
+            ) {
+                Text("Cancelar")
+            }
+        }
+    )
+}
+
+private fun statusLabel(status: String): String {
+    return when (status) {
+        "Abierta" -> "Abierto"
+        "En Proceso" -> "En progreso"
+        "Cerrada" -> "Terminada"
+        else -> status
     }
 }

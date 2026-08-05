@@ -13,8 +13,10 @@ import kotlinx.coroutines.launch
 
 data class TicketDetailUiState(
     val isLoading: Boolean = false,
+    val isUpdatingStatus: Boolean = false,
     val ticket: Ticket? = null,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val successMessage: String? = null
 )
 
 class TicketDetailViewModel(
@@ -59,6 +61,42 @@ class TicketDetailViewModel(
                 _uiState.value = TicketDetailUiState(
                     errorMessage = error.message
                         ?: "No fue posible cargar el ticket"
+                )
+            }
+        }
+    }
+
+    fun updateStatus(newStatus: String) {
+        viewModelScope.launch {
+            val token = sessionManager.accessToken.first()
+
+            if (token.isNullOrBlank()) {
+                _uiState.value = _uiState.value.copy(
+                    errorMessage = "No se encontró una sesión activa"
+                )
+                return@launch
+            }
+
+            _uiState.value = _uiState.value.copy(
+                isUpdatingStatus = true,
+                errorMessage = null,
+                successMessage = null
+            )
+
+            repository.updateTicketStatus(
+                ticketId = ticketId,
+                newStatus = newStatus,
+                accessToken = token
+            ).onSuccess { updatedTicket ->
+                _uiState.value = TicketDetailUiState(
+                    ticket = updatedTicket,
+                    successMessage = "Estado actualizado correctamente"
+                )
+            }.onFailure { error ->
+                _uiState.value = _uiState.value.copy(
+                    isUpdatingStatus = false,
+                    errorMessage = error.message
+                        ?: "No fue posible actualizar el estado"
                 )
             }
         }

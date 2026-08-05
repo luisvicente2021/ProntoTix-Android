@@ -1,4 +1,5 @@
 package com.luisvicente.prontotix.data.repository
+import com.luisvicente.prontotix.data.model.UpdateTicketStatusRequest
 
 import com.luisvicente.prontotix.data.model.Ticket
 import com.luisvicente.prontotix.data.remote.BackendRetrofitClient
@@ -66,6 +67,45 @@ class TicketsRepository {
                 Exception(
                     exception.message
                         ?: "No fue posible cargar el detalle"
+                )
+            )
+        }
+    }
+
+
+    suspend fun updateTicketStatus(
+        ticketId: Long,
+        newStatus: String,
+        accessToken: String
+    ): Result<Ticket> {
+        return try {
+            val response =
+                BackendRetrofitClient.ticketsApiService.updateTicketStatus(
+                    authorization = "Bearer $accessToken",
+                    ticketId = ticketId,
+                    request = UpdateTicketStatusRequest(
+                        status = newStatus
+                    )
+                )
+
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!)
+            } else {
+                val message = when (response.code()) {
+                    400 -> "El estado seleccionado no es válido"
+                    401 -> "Tu sesión venció"
+                    403 -> "No tienes permiso para cambiar el estado"
+                    404 -> "No se encontró la asignación"
+                    else -> "No se pudo actualizar: ${response.code()}"
+                }
+
+                Result.failure(Exception(message))
+            }
+        } catch (exception: Exception) {
+            Result.failure(
+                Exception(
+                    exception.message
+                        ?: "No fue posible conectar con el servidor"
                 )
             )
         }
