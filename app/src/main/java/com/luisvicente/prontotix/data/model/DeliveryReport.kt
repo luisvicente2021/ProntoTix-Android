@@ -7,5 +7,6 @@ data class DeliveryReport(
     val receiverName: String,
     val observations: String,
     val totalAmount: Double,
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
+    val signature: SignatureData?
 )

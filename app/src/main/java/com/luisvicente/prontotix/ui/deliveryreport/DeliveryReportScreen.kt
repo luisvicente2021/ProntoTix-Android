@@ -32,6 +32,16 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.luisvicente.prontotix.data.model.DeliveryItem
 import java.text.NumberFormat
 import java.util.Locale
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.unit.dp
+import coil.compose.rememberAsyncImagePainter
+import com.luisvicente.prontotix.data.model.EvidencePhoto
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,6 +52,32 @@ fun DeliveryReportScreen(
 ) {
     val uiState by
     deliveryReportViewModel.uiState.collectAsStateWithLifecycle()
+
+    val receiptPhotoLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.GetContent()
+        ) { uri ->
+            uri?.let {
+                deliveryReportViewModel.updateReceiptPhoto(
+                    EvidencePhoto(
+                        uri = it.toString()
+                    )
+                )
+            }
+        }
+
+    val evidencePhotoLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.GetMultipleContents()
+        ) { uris ->
+            uris.forEach { uri ->
+                deliveryReportViewModel.addEvidence(
+                    EvidencePhoto(
+                        uri = uri.toString()
+                    )
+                )
+            }
+        }
 
     Scaffold(
         topBar = {
@@ -176,6 +212,90 @@ fun DeliveryReportScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
+            Text(
+                text = "Recibo de compra",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+
+            OutlinedButton(
+                onClick = {
+                    receiptPhotoLauncher.launch("image/*")
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    if (uiState.receiptPhoto == null) {
+                        "Seleccionar foto del recibo"
+                    } else {
+                        "Cambiar foto del recibo"
+                    }
+                )
+            }
+
+            uiState.receiptPhoto?.let { photo ->
+                Image(
+                    painter = rememberAsyncImagePainter(photo.uri),
+                    contentDescription = "Foto del recibo",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(220.dp)
+                        .clip(RoundedCornerShape(12.dp)),
+                    contentScale = ContentScale.Crop
+                )
+            }
+
+            Text(
+                text = "Evidencias",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+
+            OutlinedButton(
+                onClick = {
+                    evidencePhotoLauncher.launch("image/*")
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Agregar fotografías de evidencia")
+            }
+
+            uiState.evidencePhotos.forEachIndexed { index, photo ->
+                Card(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "Evidencia ${index + 1}",
+                            fontWeight = FontWeight.SemiBold
+                        )
+
+                        Image(
+                            painter = rememberAsyncImagePainter(photo.uri),
+                            contentDescription = "Evidencia ${index + 1}",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(200.dp)
+                                .clip(RoundedCornerShape(12.dp)),
+                            contentScale = ContentScale.Crop
+                        )
+
+                        TextButton(
+                            onClick = {
+                                deliveryReportViewModel.removeEvidence(
+                                    photo.id
+                                )
+                            }
+                        ) {
+                            Text("Eliminar evidencia")
+                        }
+                    }
+                }
+            }
+
             uiState.errorMessage?.let { message ->
                 Text(
                     text = message,
@@ -190,6 +310,28 @@ fun DeliveryReportScreen(
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.SemiBold
                 )
+            }
+
+            Text(
+                text = "Firma de quien recibe",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+
+            SignaturePad(
+                onSignatureChanged = { signature ->
+                    deliveryReportViewModel.updateSignature(signature)
+                }
+            )
+
+            OutlinedButton(
+                onClick = {
+                    deliveryReportViewModel.clearSignature()
+                },
+                enabled = uiState.signature != null,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Borrar firma")
             }
 
             Button(
@@ -329,7 +471,8 @@ private fun isReportValid(
     }
 
     return validItems &&
-            uiState.receiverName.isNotBlank()
+            uiState.receiverName.isNotBlank() &&
+            uiState.signature != null
 }
 
 private fun formatCurrency(

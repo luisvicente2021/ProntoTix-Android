@@ -3,6 +3,8 @@ package com.luisvicente.prontotix.ui.deliveryreport
 import androidx.lifecycle.ViewModel
 import com.luisvicente.prontotix.data.model.DeliveryItem
 import com.luisvicente.prontotix.data.model.DeliveryReport
+import com.luisvicente.prontotix.data.model.EvidencePhoto
+import com.luisvicente.prontotix.data.model.SignatureData
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,7 +17,10 @@ data class DeliveryReportUiState(
     val isSaving: Boolean = false,
     val savedReport: DeliveryReport? = null,
     val successMessage: String? = null,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val receiptPhoto: EvidencePhoto? = null,
+    val evidencePhotos: List<EvidencePhoto> = emptyList(),
+    val signature: SignatureData? = null
 ) {
     val grandTotal: Double
         get() = items.sumOf { it.total }
@@ -136,7 +141,8 @@ class DeliveryReportViewModel : ViewModel() {
             provider = currentState.provider.trim(),
             receiverName = currentState.receiverName.trim(),
             observations = currentState.observations.trim(),
-            totalAmount = currentState.grandTotal
+            totalAmount = currentState.grandTotal,
+            signature = currentState.signature
         )
 
         _uiState.value = currentState.copy(
@@ -159,6 +165,48 @@ class DeliveryReportViewModel : ViewModel() {
                     item
                 }
             },
+            successMessage = null,
+            errorMessage = null
+        )
+    }
+
+    fun updateReceiptPhoto(photo: EvidencePhoto) {
+        _uiState.value = _uiState.value.copy(
+            receiptPhoto = photo,
+            successMessage = null,
+            errorMessage = null
+        )
+    }
+
+    fun addEvidence(photo: EvidencePhoto) {
+        _uiState.value = _uiState.value.copy(
+            evidencePhotos = _uiState.value.evidencePhotos + photo,
+            successMessage = null,
+            errorMessage = null
+        )
+    }
+
+    fun removeEvidence(photoId: Long) {
+        _uiState.value = _uiState.value.copy(
+            evidencePhotos = _uiState.value.evidencePhotos.filterNot {
+                it.id == photoId
+            },
+            successMessage = null,
+            errorMessage = null
+        )
+    }
+
+    fun updateSignature(signature: SignatureData) {
+        _uiState.value = _uiState.value.copy(
+            signature = signature,
+            successMessage = null,
+            errorMessage = null
+        )
+    }
+
+    fun clearSignature() {
+        _uiState.value = _uiState.value.copy(
+            signature = null,
             successMessage = null,
             errorMessage = null
         )
