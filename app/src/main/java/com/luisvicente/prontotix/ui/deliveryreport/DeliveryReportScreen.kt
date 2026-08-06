@@ -1,5 +1,8 @@
 package com.luisvicente.prontotix.ui.deliveryreport
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -24,24 +28,19 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.rememberAsyncImagePainter
 import com.luisvicente.prontotix.data.model.DeliveryItem
+import com.luisvicente.prontotix.data.model.EvidencePhoto
 import java.text.NumberFormat
 import java.util.Locale
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.unit.dp
-import coil.compose.rememberAsyncImagePainter
-import com.luisvicente.prontotix.data.model.EvidencePhoto
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,6 +51,8 @@ fun DeliveryReportScreen(
 ) {
     val uiState by
     deliveryReportViewModel.uiState.collectAsStateWithLifecycle()
+
+    val context = LocalContext.current
 
     val receiptPhotoLauncher =
         rememberLauncherForActivityResult(
@@ -165,7 +166,9 @@ fun DeliveryReportScreen(
                         style = MaterialTheme.typography.titleMedium
                     )
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(
+                        modifier = Modifier.height(8.dp)
+                    )
 
                     Text(
                         text = formatCurrency(
@@ -210,8 +213,6 @@ fun DeliveryReportScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
-
             Text(
                 text = "Recibo de compra",
                 style = MaterialTheme.typography.titleMedium,
@@ -235,12 +236,16 @@ fun DeliveryReportScreen(
 
             uiState.receiptPhoto?.let { photo ->
                 Image(
-                    painter = rememberAsyncImagePainter(photo.uri),
+                    painter = rememberAsyncImagePainter(
+                        photo.uri
+                    ),
                     contentDescription = "Foto del recibo",
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(220.dp)
-                        .clip(RoundedCornerShape(12.dp)),
+                        .clip(
+                            RoundedCornerShape(12.dp)
+                        ),
                     contentScale = ContentScale.Crop
                 )
             }
@@ -260,13 +265,17 @@ fun DeliveryReportScreen(
                 Text("Agregar fotografías de evidencia")
             }
 
-            uiState.evidencePhotos.forEachIndexed { index, photo ->
+            uiState.evidencePhotos.forEachIndexed {
+                    index,
+                    photo ->
+
                 Card(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(
                         modifier = Modifier.padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement =
+                            Arrangement.spacedBy(8.dp)
                     ) {
                         Text(
                             text = "Evidencia ${index + 1}",
@@ -274,42 +283,32 @@ fun DeliveryReportScreen(
                         )
 
                         Image(
-                            painter = rememberAsyncImagePainter(photo.uri),
-                            contentDescription = "Evidencia ${index + 1}",
+                            painter = rememberAsyncImagePainter(
+                                photo.uri
+                            ),
+                            contentDescription =
+                                "Evidencia ${index + 1}",
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(200.dp)
-                                .clip(RoundedCornerShape(12.dp)),
+                                .clip(
+                                    RoundedCornerShape(12.dp)
+                                ),
                             contentScale = ContentScale.Crop
                         )
 
                         TextButton(
                             onClick = {
-                                deliveryReportViewModel.removeEvidence(
-                                    photo.id
-                                )
+                                deliveryReportViewModel
+                                    .removeEvidence(
+                                        photo.id
+                                    )
                             }
                         ) {
                             Text("Eliminar evidencia")
                         }
                     }
                 }
-            }
-
-            uiState.errorMessage?.let { message ->
-                Text(
-                    text = message,
-                    color = MaterialTheme.colorScheme.error,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-
-            uiState.successMessage?.let { message ->
-                Text(
-                    text = message,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.SemiBold
-                )
             }
 
             Text(
@@ -320,7 +319,9 @@ fun DeliveryReportScreen(
 
             SignaturePad(
                 onSignatureChanged = { signature ->
-                    deliveryReportViewModel.updateSignature(signature)
+                    deliveryReportViewModel.updateSignature(
+                        signature
+                    )
                 }
             )
 
@@ -336,7 +337,9 @@ fun DeliveryReportScreen(
 
             Button(
                 onClick = {
-                    deliveryReportViewModel.saveReport(ticketId)
+                    deliveryReportViewModel.saveReport(
+                        ticketId
+                    )
                 },
                 enabled = isReportValid(uiState) &&
                         !uiState.isSaving,
@@ -349,6 +352,75 @@ fun DeliveryReportScreen(
                         "Guardar reporte"
                     }
                 )
+            }
+
+            uiState.successMessage?.let { message ->
+                Text(
+                    text = message,
+                    color =
+                        MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            uiState.errorMessage?.let { message ->
+                Text(
+                    text = message,
+                    color =
+                        MaterialTheme.colorScheme.error,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            Button(
+                onClick = {
+                    deliveryReportViewModel.generatePdf(
+                        context = context,
+                        ticketId = ticketId
+                    )
+                },
+                enabled =
+                    uiState.savedReport != null &&
+                            !uiState.isGeneratingPdf,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    if (uiState.isGeneratingPdf) {
+                        "Generando PDF..."
+                    } else {
+                        "Generar PDF"
+                    }
+                )
+            }
+
+            uiState.generatedPdfPath?.let { path ->
+                Text(
+                    text = "PDF creado en:\n$path",
+                    style =
+                        MaterialTheme.typography.bodySmall
+                )
+            }
+
+            if (uiState.generatedPdfPath != null) {
+                OutlinedButton(
+                    onClick = {
+                        deliveryReportViewModel
+                            .openGeneratedPdf(context)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Ver PDF")
+                }
+
+                OutlinedButton(
+                    onClick = {
+                        deliveryReportViewModel
+                            .shareGeneratedPdf(context)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Compartir PDF")
+                }
             }
         }
     }
@@ -418,7 +490,8 @@ private fun DeliveryItemCard(
                     Text("Cantidad")
                 },
                 keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Number
+                    keyboardType =
+                        KeyboardType.Number
                 ),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
@@ -435,14 +508,16 @@ private fun DeliveryItemCard(
                     Text("Precio unitario")
                 },
                 keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Decimal
+                    keyboardType =
+                        KeyboardType.Decimal
                 ),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
 
             Text(
-                text = "Importe: ${formatCurrency(item.total)}",
+                text =
+                    "Importe: ${formatCurrency(item.total)}",
                 fontWeight = FontWeight.SemiBold
             )
         }
@@ -466,8 +541,10 @@ private fun isReportValid(
 ): Boolean {
     val validItems = uiState.items.all { item ->
         item.material.isNotBlank() &&
-                (item.quantity.toDoubleOrNull() ?: 0.0) > 0 &&
-                (item.unitPrice.toDoubleOrNull() ?: 0.0) >= 0
+                (item.quantity.toDoubleOrNull()
+                    ?: 0.0) > 0 &&
+                (item.unitPrice.toDoubleOrNull()
+                    ?: 0.0) >= 0
     }
 
     return validItems &&

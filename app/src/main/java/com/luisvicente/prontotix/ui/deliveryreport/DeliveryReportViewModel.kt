@@ -8,6 +8,9 @@ import com.luisvicente.prontotix.data.model.SignatureData
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import android.content.Context
+import com.luisvicente.prontotix.util.DeliveryPdfGenerator
+import com.luisvicente.prontotix.util.PdfShareHelper
 
 data class DeliveryReportUiState(
     val items: List<DeliveryItem> = listOf(DeliveryItem()),
@@ -20,7 +23,9 @@ data class DeliveryReportUiState(
     val errorMessage: String? = null,
     val receiptPhoto: EvidencePhoto? = null,
     val evidencePhotos: List<EvidencePhoto> = emptyList(),
-    val signature: SignatureData? = null
+    val signature: SignatureData? = null,
+    val isGeneratingPdf: Boolean = false,
+    val generatedPdfPath: String? = null
 ) {
     val grandTotal: Double
         get() = items.sumOf { it.total }
@@ -210,5 +215,92 @@ class DeliveryReportViewModel : ViewModel() {
             successMessage = null,
             errorMessage = null
         )
+    }
+
+    fun generatePdf(
+        context: Context,
+        ticketId: Long
+    ) {
+        val currentState = _uiState.value
+
+        if (currentState.savedReport == null) {
+            _uiState.value = currentState.copy(
+                errorMessage = "Primero guarda el reporte",
+                successMessage = null
+            )
+            return
+        }
+
+        _uiState.value = currentState.copy(
+            isGeneratingPdf = true,
+            errorMessage = null,
+            successMessage = null
+        )
+
+        DeliveryPdfGenerator.generate(
+            context = context.applicationContext,
+            ticketId = ticketId,
+            report = currentState
+        ).onSuccess { file ->
+            _uiState.value = _uiState.value.copy(
+                isGeneratingPdf = false,
+                generatedPdfPath = file.absolutePath,
+                successMessage = "PDF generado correctamente: ${file.name}",
+                errorMessage = null
+            )
+        }.onFailure { error ->
+            _uiState.value = _uiState.value.copy(
+                isGeneratingPdf = false,
+                generatedPdfPath = null,
+                errorMessage = "Error al generar PDF: ${error.message}",
+                successMessage = null
+            )
+        }
+    }
+
+    fun openGeneratedPdf(context: Context) {
+        val path = _uiState.value.generatedPdfPath
+
+        if (path.isNullOrBlank()) {
+            _uiState.value = _uiState.value.copy(
+                errorMessage = "Primero genera el PDF",
+                successMessage = null
+            )
+            return
+        }
+
+        PdfShareHelper.openPdf(
+            context = context,
+            filePath = path
+        ).onFailure { error ->
+            _uiState.value = _uiState.value.copy(
+                errorMessage = error.message
+                    ?: "No fue posible abrir el PDF",
+                successMessage = null
+            )
+        }
+    }
+
+    fun shareGeneratedPdf(context: Context) {
+        val path = _uiState.value.generatedPdfPath
+
+        if (path.isNullOrBlank()) {
+            _uiState.value = _uiState.value.copy(
+                errorMessage = "Primero genera el PDF",
+                successMessage = null
+            )
+            return
+        }
+
+        PdfShareHelper.sharePdf(
+            context = context,
+            filePath = path
+        ).onFailure { error ->
+            _uiState.value = _uiState.value.copy(
+                errorMessage = error.message
+                    ?: "No fue posible compartir el PDF",
+                successMessage = null
+            )
+        }
     }
 }
