@@ -16,8 +16,11 @@ import com.luisvicente.prontotix.data.local.SessionManager
 import com.luisvicente.prontotix.data.model.DeliveryReportItemRequest
 import com.luisvicente.prontotix.data.model.DeliveryReportRequest
 import com.luisvicente.prontotix.data.repository.DeliveryReportRepository
+import com.luisvicente.prontotix.data.repository.SupabaseStorageRepository
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import com.luisvicente.prontotix.BuildConfig
+import android.net.Uri
 
 data class DeliveryReportUiState(
     val items: List<DeliveryItem> = listOf(DeliveryItem()),
@@ -42,6 +45,122 @@ class DeliveryReportViewModel(
     private val sessionManager: SessionManager,
     private val repository: DeliveryReportRepository = DeliveryReportRepository()
 ) : ViewModel() {
+
+    private val storageRepository =
+        SupabaseStorageRepository()
+
+    fun uploadReceipt(
+        context: Context,
+        ticketId: Long
+    ) {
+        viewModelScope.launch {
+            val currentState = _uiState.value
+
+            val photo = currentState.receiptPhoto
+
+            if (photo == null) {
+                _uiState.value = currentState.copy(
+                    errorMessage = "Primero selecciona una foto del recibo",
+                    successMessage = null
+                )
+                return@launch
+            }
+
+            val token = sessionManager.accessToken.first()
+
+            if (token.isNullOrBlank()) {
+                _uiState.value = currentState.copy(
+                    errorMessage = "No se encontró una sesión activa",
+                    successMessage = null
+                )
+                return@launch
+            }
+
+            val uri = Uri.parse(photo.uri)
+
+            storageRepository.uploadReceipt(
+                context = context.applicationContext,
+                ticketId = ticketId,
+                uri = uri,
+                accessToken = token,
+                publishableKey = BuildConfig.SUPABASE_KEY
+            ).onSuccess { path ->
+
+                _uiState.value = _uiState.value.copy(
+                    successMessage = "Recibo subido correctamente: $path",
+                    errorMessage = null
+                )
+
+            }.onFailure { error ->
+
+                _uiState.value = _uiState.value.copy(
+                    errorMessage = error.message
+                        ?: "No fue posible subir el recibo",
+                    successMessage = null
+                )
+            }
+        }
+    }
+
+    fun uploadEvidences(
+        context: Context,
+        ticketId: Long
+    ) {
+        viewModelScope.launch {
+            val currentState = _uiState.value
+
+            if (currentState.evidencePhotos.isEmpty()) {
+                _uiState.value = currentState.copy(
+                    errorMessage = "No hay evidencias para subir",
+                    successMessage = null
+                )
+                return@launch
+            }
+
+            val token = sessionManager.accessToken.first()
+
+            if (token.isNullOrBlank()) {
+                _uiState.value = currentState.copy(
+                    errorMessage = "No se encontró una sesión activa",
+                    successMessage = null
+                )
+                return@launch
+            }
+
+            var uploadedCount = 0
+
+            currentState.evidencePhotos.forEachIndexed { index, photo ->
+
+                val result = storageRepository.uploadEvidence(
+                    context = context.applicationContext,
+                    ticketId = ticketId,
+                    uri = Uri.parse(photo.uri),
+                    accessToken = token,
+                    publishableKey = BuildConfig.SUPABASE_KEY,
+                    index = index + 1
+                )
+
+                if (result.isFailure) {
+                    _uiState.value = _uiState.value.copy(
+                        errorMessage =
+                            result.exceptionOrNull()?.message
+                                ?: "Error al subir evidencias",
+                        successMessage = null
+                    )
+
+                    return@launch
+                }
+
+                uploadedCount++
+            }
+
+            _uiState.value = _uiState.value.copy(
+                successMessage =
+                    "$uploadedCount evidencia(s) subida(s) correctamente",
+                errorMessage = null
+            )
+        }
+    }
 
     private val _uiState = MutableStateFlow(
         DeliveryReportUiState()

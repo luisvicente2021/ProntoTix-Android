@@ -37,9 +37,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
+import com.luisvicente.prontotix.BuildConfig
 import com.luisvicente.prontotix.data.local.SessionManager
 import com.luisvicente.prontotix.data.model.DeliveryItem
 import com.luisvicente.prontotix.data.model.EvidencePhoto
+import com.luisvicente.prontotix.data.remote.SupabaseStorageClient
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -49,6 +51,10 @@ fun DeliveryReportScreen(
     ticketId: Long,
     onBack: () -> Unit
 ) {
+
+    SupabaseStorageClient.initialize(
+        supabaseUrl = BuildConfig.SUPABASE_URL
+    )
     val context = LocalContext.current
 
     val deliveryReportViewModel: DeliveryReportViewModel = viewModel(
@@ -317,6 +323,32 @@ fun DeliveryReportScreen(
                         }
                     }
                 }
+            }
+
+            OutlinedButton(
+                onClick = {
+                    deliveryReportViewModel.uploadReceipt(
+                        context = context,
+                        ticketId = ticketId
+                    )
+                },
+                enabled = uiState.receiptPhoto != null,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Subir recibo")
+            }
+
+            OutlinedButton(
+                onClick = {
+                    deliveryReportViewModel.uploadEvidences(
+                        context = context,
+                        ticketId = ticketId
+                    )
+                },
+                enabled = uiState.evidencePhotos.isNotEmpty(),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Subir evidencias")
             }
 
             Text(
