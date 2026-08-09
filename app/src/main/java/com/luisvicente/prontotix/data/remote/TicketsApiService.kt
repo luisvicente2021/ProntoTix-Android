@@ -1,5 +1,6 @@
 package com.luisvicente.prontotix.data.remote
 
+import com.luisvicente.prontotix.data.model.CreateDeliveryReportEvidenceRequest
 import com.luisvicente.prontotix.data.model.Ticket
 import com.luisvicente.prontotix.data.model.UpdateTicketStatusRequest
 import retrofit2.Response
@@ -39,4 +40,11 @@ interface TicketsApiService {
         @Path("id") ticketId: Long,
         @Body request: DeliveryReportRequest
     ): Response<DeliveryReportResponse>
+
+    @POST("api/tickets/{id}/delivery-report/evidence")
+    suspend fun addDeliveryReportEvidence(
+        @Header("Authorization") authorization: String,
+        @Path("id") ticketId: Long,
+        @Body request: CreateDeliveryReportEvidenceRequest
+    ): Response<Unit>
 }

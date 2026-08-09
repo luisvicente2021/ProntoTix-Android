@@ -131,20 +131,43 @@ class DeliveryReportViewModel(
 
             currentState.evidencePhotos.forEachIndexed { index, photo ->
 
-                val result = storageRepository.uploadEvidence(
-                    context = context.applicationContext,
-                    ticketId = ticketId,
-                    uri = Uri.parse(photo.uri),
-                    accessToken = token,
-                    publishableKey = BuildConfig.SUPABASE_KEY,
-                    index = index + 1
-                )
+                // 1. Subimos la imagen a Supabase Storage
+                val uploadResult =
+                    storageRepository.uploadEvidence(
+                        context = context.applicationContext,
+                        ticketId = ticketId,
+                        uri = Uri.parse(photo.uri),
+                        accessToken = token,
+                        publishableKey = BuildConfig.SUPABASE_KEY,
+                        index = index + 1
+                    )
 
-                if (result.isFailure) {
+                if (uploadResult.isFailure) {
                     _uiState.value = _uiState.value.copy(
                         errorMessage =
-                            result.exceptionOrNull()?.message
-                                ?: "Error al subir evidencias",
+                            uploadResult.exceptionOrNull()?.message
+                                ?: "Error al subir evidencia",
+                        successMessage = null
+                    )
+
+                    return@launch
+                }
+
+                val imagePath = uploadResult.getOrThrow()
+
+                // 2. Registramos la ruta en Vapor/PostgreSQL
+                val registerResult =
+                    repository.addEvidence(
+                        ticketId = ticketId,
+                        accessToken = token,
+                        imageUrl = imagePath
+                    )
+
+                if (registerResult.isFailure) {
+                    _uiState.value = _uiState.value.copy(
+                        errorMessage =
+                            registerResult.exceptionOrNull()?.message
+                                ?: "La imagen se subió, pero no se pudo registrar",
                         successMessage = null
                     )
 
@@ -156,7 +179,7 @@ class DeliveryReportViewModel(
 
             _uiState.value = _uiState.value.copy(
                 successMessage =
-                    "$uploadedCount evidencia(s) subida(s) correctamente",
+                    "$uploadedCount evidencia(s) subida(s) y registradas correctamente",
                 errorMessage = null
             )
         }
