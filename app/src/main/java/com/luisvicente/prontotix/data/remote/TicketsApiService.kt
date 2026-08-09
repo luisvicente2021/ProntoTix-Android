@@ -8,6 +8,9 @@ import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.PUT
 import retrofit2.http.Path
+import com.luisvicente.prontotix.data.model.DeliveryReportRequest
+import com.luisvicente.prontotix.data.model.DeliveryReportResponse
+import retrofit2.http.POST
 
 interface TicketsApiService {
 
@@ -29,4 +32,11 @@ interface TicketsApiService {
         @Path("id") ticketId: Long,
         @Body request: UpdateTicketStatusRequest
     ): Response<Ticket>
+
+    @POST("api/tickets/{id}/delivery-report")
+    suspend fun createDeliveryReport(
+        @Header("Authorization") authorization: String,
+        @Path("id") ticketId: Long,
+        @Body request: DeliveryReportRequest
+    ): Response<DeliveryReportResponse>
 }

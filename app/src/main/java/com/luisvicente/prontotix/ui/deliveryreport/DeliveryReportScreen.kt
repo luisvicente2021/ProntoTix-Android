@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
+import com.luisvicente.prontotix.data.local.SessionManager
 import com.luisvicente.prontotix.data.model.DeliveryItem
 import com.luisvicente.prontotix.data.model.EvidencePhoto
 import java.text.NumberFormat
@@ -46,13 +47,20 @@ import java.util.Locale
 @Composable
 fun DeliveryReportScreen(
     ticketId: Long,
-    onBack: () -> Unit,
-    deliveryReportViewModel: DeliveryReportViewModel = viewModel()
+    onBack: () -> Unit
 ) {
+    val context = LocalContext.current
+
+    val deliveryReportViewModel: DeliveryReportViewModel = viewModel(
+        factory = DeliveryReportViewModelFactory(
+            sessionManager = SessionManager(
+                context.applicationContext
+            )
+        )
+    )
+
     val uiState by
     deliveryReportViewModel.uiState.collectAsStateWithLifecycle()
-
-    val context = LocalContext.current
 
     val receiptPhotoLauncher =
         rememberLauncherForActivityResult(

@@ -11,6 +11,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import android.content.Context
 import com.luisvicente.prontotix.util.DeliveryPdfGenerator
 import com.luisvicente.prontotix.util.PdfShareHelper
+import androidx.lifecycle.viewModelScope
+import com.luisvicente.prontotix.data.local.SessionManager
+import com.luisvicente.prontotix.data.model.DeliveryReportItemRequest
+import com.luisvicente.prontotix.data.model.DeliveryReportRequest
+import com.luisvicente.prontotix.data.repository.DeliveryReportRepository
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 data class DeliveryReportUiState(
     val items: List<DeliveryItem> = listOf(DeliveryItem()),
@@ -31,7 +38,10 @@ data class DeliveryReportUiState(
         get() = items.sumOf { it.total }
 }
 
-class DeliveryReportViewModel : ViewModel() {
+class DeliveryReportViewModel(
+    private val sessionManager: SessionManager,
+    private val repository: DeliveryReportRepository = DeliveryReportRepository()
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
         DeliveryReportUiState()
@@ -116,46 +126,96 @@ class DeliveryReportViewModel : ViewModel() {
     }
 
     fun saveReport(ticketId: Long) {
-        val currentState = _uiState.value
+        viewModelScope.launch {
+            val currentState = _uiState.value
 
-        val invalidItem = currentState.items.any { item ->
-            item.material.isBlank() ||
-                    (item.quantity.toDoubleOrNull() ?: 0.0) <= 0 ||
-                    (item.unitPrice.toDoubleOrNull() ?: -1.0) < 0
-        }
+            val invalidItem = currentState.items.any { item ->
+                item.material.isBlank() ||
+                        (item.quantity.toDoubleOrNull() ?: 0.0) <= 0 ||
+                        (item.unitPrice.toDoubleOrNull() ?: -1.0) < 0
+            }
 
-        if (invalidItem) {
+            if (invalidItem) {
+                _uiState.value = currentState.copy(
+                    errorMessage = "Revisa la información de los materiales",
+                    successMessage = null
+                )
+                return@launch
+            }
+
+            if (currentState.receiverName.isBlank()) {
+                _uiState.value = currentState.copy(
+                    errorMessage = "Escribe el nombre de quien recibe",
+                    successMessage = null
+                )
+                return@launch
+            }
+
+            val token = sessionManager.accessToken.first()
+
+            if (token.isNullOrBlank()) {
+                _uiState.value = currentState.copy(
+                    errorMessage = "No se encontró una sesión activa",
+                    successMessage = null
+                )
+                return@launch
+            }
+
+            val request = DeliveryReportRequest(
+                provider = currentState.provider.trim(),
+                receiverName = currentState.receiverName.trim(),
+                observations = currentState.observations
+                    .trim()
+                    .ifBlank { null },
+                items = currentState.items.map { item ->
+                    DeliveryReportItemRequest(
+                        material = item.material.trim(),
+                        quantity = item.quantity.toDouble(),
+                        unitPrice = item.unitPrice.toDouble()
+                    )
+                }
+            )
+
             _uiState.value = currentState.copy(
-                errorMessage = "Revisa la información de los materiales",
+                isSaving = true,
+                errorMessage = null,
                 successMessage = null
             )
-            return
+
+            repository.createReport(
+                ticketId = ticketId,
+                accessToken = token,
+                request = request
+            ).onSuccess { response ->
+
+                val localReport = DeliveryReport(
+                    ticketId = ticketId,
+                    items = currentState.items,
+                    provider = response.provider,
+                    receiverName = response.receiverName,
+                    observations = response.observations.orEmpty(),
+                    totalAmount = response.totalAmount,
+                    signature = currentState.signature
+                )
+
+                _uiState.value = _uiState.value.copy(
+                    isSaving = false,
+                    savedReport = localReport,
+                    successMessage =
+                        "Reporte guardado correctamente en el servidor",
+                    errorMessage = null
+                )
+
+            }.onFailure { error ->
+
+                _uiState.value = _uiState.value.copy(
+                    isSaving = false,
+                    errorMessage = error.message
+                        ?: "No fue posible guardar el reporte",
+                    successMessage = null
+                )
+            }
         }
-
-        if (currentState.receiverName.isBlank()) {
-            _uiState.value = currentState.copy(
-                errorMessage = "Escribe el nombre de quien recibe",
-                successMessage = null
-            )
-            return
-        }
-
-        val report = DeliveryReport(
-            ticketId = ticketId,
-            items = currentState.items,
-            provider = currentState.provider.trim(),
-            receiverName = currentState.receiverName.trim(),
-            observations = currentState.observations.trim(),
-            totalAmount = currentState.grandTotal,
-            signature = currentState.signature
-        )
-
-        _uiState.value = currentState.copy(
-            isSaving = false,
-            savedReport = report,
-            successMessage = "Reporte preparado correctamente",
-            errorMessage = null
-        )
     }
 
     private fun updateItem(
