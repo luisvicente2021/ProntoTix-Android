@@ -325,31 +325,9 @@ fun DeliveryReportScreen(
                 }
             }
 
-            OutlinedButton(
-                onClick = {
-                    deliveryReportViewModel.uploadReceipt(
-                        context = context,
-                        ticketId = ticketId
-                    )
-                },
-                enabled = uiState.receiptPhoto != null,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Subir recibo")
-            }
 
-            OutlinedButton(
-                onClick = {
-                    deliveryReportViewModel.uploadEvidences(
-                        context = context,
-                        ticketId = ticketId
-                    )
-                },
-                enabled = uiState.evidencePhotos.isNotEmpty(),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Subir evidencias")
-            }
+
+
 
             Text(
                 text = "Firma de quien recibe",
@@ -375,10 +353,13 @@ fun DeliveryReportScreen(
                 Text("Borrar firma")
             }
 
+
+
             Button(
                 onClick = {
                     deliveryReportViewModel.saveReport(
-                        ticketId
+                        context = context,
+                        ticketId = ticketId
                     )
                 },
                 enabled = isReportValid(uiState) &&

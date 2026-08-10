@@ -6,6 +6,7 @@ import com.luisvicente.prontotix.data.remote.SupabaseStorageClient
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 
+
 class SupabaseStorageRepository {
 
     suspend fun uploadReceipt(
@@ -105,8 +106,10 @@ class SupabaseStorageRepository {
                 else -> "jpg"
             }
 
+            val uniqueId = System.currentTimeMillis()
+
             val path =
-                "ticket-$ticketId/evidence-$index.$extension"
+                "ticket-$ticketId/evidence-$uniqueId-$index.$extension"
 
             val requestBody = bytes.toRequestBody(
                 mimeType.toMediaType()
@@ -129,6 +132,45 @@ class SupabaseStorageRepository {
                 Result.failure(
                     Exception(
                         "Error al subir evidencia: ${response.code()}"
+                    )
+                )
+            }
+
+        } catch (exception: Exception) {
+            Result.failure(exception)
+        }
+    }
+
+    suspend fun uploadSignature(
+        ticketId: Long,
+        signatureBytes: ByteArray,
+        accessToken: String,
+        publishableKey: String
+    ): Result<String> {
+        return try {
+            val path = "ticket-$ticketId/signature.png"
+
+            val requestBody = signatureBytes.toRequestBody(
+                "image/png".toMediaType()
+            )
+
+            val response =
+                SupabaseStorageClient.api()
+                    .uploadFile(
+                        authorization = "Bearer $accessToken",
+                        apiKey = publishableKey,
+                        contentType = "image/png",
+                        bucket = "delivery-reports",
+                        path = path,
+                        body = requestBody
+                    )
+
+            if (response.isSuccessful) {
+                Result.success(path)
+            } else {
+                Result.failure(
+                    Exception(
+                        "Error al subir firma: ${response.code()}"
                     )
                 )
             }

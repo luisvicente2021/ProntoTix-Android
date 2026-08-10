@@ -11,6 +11,8 @@ import retrofit2.http.PUT
 import retrofit2.http.Path
 import com.luisvicente.prontotix.data.model.DeliveryReportRequest
 import com.luisvicente.prontotix.data.model.DeliveryReportResponse
+import com.luisvicente.prontotix.data.model.UpdateDeliveryReportFilesRequest
+import retrofit2.http.PATCH
 import retrofit2.http.POST
 
 interface TicketsApiService {
@@ -47,4 +49,11 @@ interface TicketsApiService {
         @Path("id") ticketId: Long,
         @Body request: CreateDeliveryReportEvidenceRequest
     ): Response<Unit>
+
+    @PATCH("api/tickets/{id}/delivery-report/files")
+    suspend fun updateDeliveryReportFiles(
+        @Header("Authorization") authorization: String,
+        @Path("id") ticketId: Long,
+        @Body request: UpdateDeliveryReportFilesRequest
+    ): Response<DeliveryReportResponse>
 }

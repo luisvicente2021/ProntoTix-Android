@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import com.luisvicente.prontotix.BuildConfig
 import android.net.Uri
+import com.luisvicente.prontotix.util.SignatureBitmapUtils
 
 data class DeliveryReportUiState(
     val items: List<DeliveryItem> = listOf(DeliveryItem()),
@@ -185,6 +186,84 @@ class DeliveryReportViewModel(
         }
     }
 
+    fun uploadSignature(
+        context: Context,
+        ticketId: Long
+    ) {
+        viewModelScope.launch {
+            val currentState = _uiState.value
+
+            val signature = currentState.signature
+
+            if (signature == null) {
+                _uiState.value = currentState.copy(
+                    errorMessage = "Primero captura la firma",
+                    successMessage = null
+                )
+                return@launch
+            }
+
+            val token = sessionManager.accessToken.first()
+
+            if (token.isNullOrBlank()) {
+                _uiState.value = currentState.copy(
+                    errorMessage = "No se encontró una sesión activa",
+                    successMessage = null
+                )
+                return@launch
+            }
+
+            val signatureBytes =
+                SignatureBitmapUtils.toPngBytes(
+                    signature = signature
+                )
+
+            val uploadResult =
+                storageRepository.uploadSignature(
+                    ticketId = ticketId,
+                    signatureBytes = signatureBytes,
+                    accessToken = token,
+                    publishableKey = BuildConfig.SUPABASE_KEY
+                )
+
+            if (uploadResult.isFailure) {
+                _uiState.value = _uiState.value.copy(
+                    errorMessage =
+                        uploadResult.exceptionOrNull()?.message
+                            ?: "No fue posible subir la firma",
+                    successMessage = null
+                )
+                return@launch
+            }
+
+            val signaturePath =
+                uploadResult.getOrThrow()
+
+            val updateResult =
+                repository.updateFiles(
+                    ticketId = ticketId,
+                    accessToken = token,
+                    signatureUrl = signaturePath
+                )
+
+            if (updateResult.isFailure) {
+                _uiState.value = _uiState.value.copy(
+                    errorMessage =
+                        updateResult.exceptionOrNull()?.message
+                            ?: "La firma se subió, pero no se pudo registrar",
+                    successMessage = null
+                )
+                return@launch
+            }
+
+            _uiState.value = _uiState.value.copy(
+                successMessage =
+                    "Firma subida y registrada correctamente",
+                errorMessage = null
+            )
+        }
+    }
+
     private val _uiState = MutableStateFlow(
         DeliveryReportUiState()
     )
@@ -267,10 +346,19 @@ class DeliveryReportViewModel(
         )
     }
 
-    fun saveReport(ticketId: Long) {
+    fun saveReport(
+        context: Context,
+        ticketId: Long
+    ) {
         viewModelScope.launch {
+
             val currentState = _uiState.value
 
+            if (currentState.isSaving) {
+                return@launch
+            }
+
+            // 1. Validar materiales
             val invalidItem = currentState.items.any { item ->
                 item.material.isBlank() ||
                         (item.quantity.toDoubleOrNull() ?: 0.0) <= 0 ||
@@ -285,6 +373,7 @@ class DeliveryReportViewModel(
                 return@launch
             }
 
+            // 2. Validar receptor
             if (currentState.receiverName.isBlank()) {
                 _uiState.value = currentState.copy(
                     errorMessage = "Escribe el nombre de quien recibe",
@@ -293,6 +382,7 @@ class DeliveryReportViewModel(
                 return@launch
             }
 
+            // 3. Obtener sesión
             val token = sessionManager.accessToken.first()
 
             if (token.isNullOrBlank()) {
@@ -324,39 +414,183 @@ class DeliveryReportViewModel(
                 successMessage = null
             )
 
-            repository.createReport(
+            // =========================================================
+            // PASO 1 - CREAR EL REPORTE PRIMERO
+            // =========================================================
+
+            val reportResult = repository.createReport(
                 ticketId = ticketId,
                 accessToken = token,
                 request = request
-            ).onSuccess { response ->
+            )
 
-                val localReport = DeliveryReport(
-                    ticketId = ticketId,
-                    items = currentState.items,
-                    provider = response.provider,
-                    receiverName = response.receiverName,
-                    observations = response.observations.orEmpty(),
-                    totalAmount = response.totalAmount,
-                    signature = currentState.signature
-                )
-
+            if (reportResult.isFailure) {
                 _uiState.value = _uiState.value.copy(
                     isSaving = false,
-                    savedReport = localReport,
-                    successMessage =
-                        "Reporte guardado correctamente en el servidor",
-                    errorMessage = null
-                )
-
-            }.onFailure { error ->
-
-                _uiState.value = _uiState.value.copy(
-                    isSaving = false,
-                    errorMessage = error.message
+                    errorMessage = reportResult.exceptionOrNull()?.message
                         ?: "No fue posible guardar el reporte",
                     successMessage = null
                 )
+                return@launch
             }
+
+            val response = reportResult.getOrThrow()
+
+            // =========================================================
+            // PASO 2 - SUBIR RECIBO
+            // =========================================================
+
+            var receiptPath: String? = null
+
+            currentState.receiptPhoto?.let { photo ->
+
+                val receiptResult = storageRepository.uploadReceipt(
+                    context = context.applicationContext,
+                    ticketId = ticketId,
+                    uri = Uri.parse(photo.uri),
+                    accessToken = token,
+                    publishableKey = BuildConfig.SUPABASE_KEY
+                )
+
+                if (receiptResult.isFailure) {
+                    _uiState.value = _uiState.value.copy(
+                        isSaving = false,
+                        errorMessage = receiptResult.exceptionOrNull()?.message
+                            ?: "El reporte se creó, pero falló la subida del recibo",
+                        successMessage = null
+                    )
+                    return@launch
+                }
+
+                receiptPath = receiptResult.getOrThrow()
+            }
+
+            // =========================================================
+            // PASO 3 - SUBIR FIRMA
+            // =========================================================
+
+            var signaturePath: String? = null
+
+            currentState.signature?.let { signature ->
+
+                val signatureBytes =
+                    SignatureBitmapUtils.toPngBytes(signature)
+
+                val signatureResult =
+                    storageRepository.uploadSignature(
+                        ticketId = ticketId,
+                        signatureBytes = signatureBytes,
+                        accessToken = token,
+                        publishableKey = BuildConfig.SUPABASE_KEY
+                    )
+
+                if (signatureResult.isFailure) {
+                    _uiState.value = _uiState.value.copy(
+                        isSaving = false,
+                        errorMessage =
+                            signatureResult.exceptionOrNull()?.message
+                                ?: "El reporte se creó, pero falló la firma",
+                        successMessage = null
+                    )
+                    return@launch
+                }
+
+                signaturePath = signatureResult.getOrThrow()
+            }
+
+            // =========================================================
+            // PASO 4 - REGISTRAR RECIBO Y FIRMA EN BACKEND
+            // =========================================================
+
+            if (receiptPath != null || signaturePath != null) {
+
+                val filesResult = repository.updateFiles(
+                    ticketId = ticketId,
+                    accessToken = token,
+                    receiptUrl = receiptPath,
+                    signatureUrl = signaturePath
+                )
+
+                if (filesResult.isFailure) {
+                    _uiState.value = _uiState.value.copy(
+                        isSaving = false,
+                        errorMessage =
+                            filesResult.exceptionOrNull()?.message
+                                ?: "Los archivos se subieron, pero no pudieron registrarse",
+                        successMessage = null
+                    )
+                    return@launch
+                }
+            }
+
+            // =========================================================
+            // PASO 5 - SUBIR Y REGISTRAR EVIDENCIAS
+            // =========================================================
+
+            currentState.evidencePhotos.forEachIndexed { index, photo ->
+
+                val uploadResult =
+                    storageRepository.uploadEvidence(
+                        context = context.applicationContext,
+                        ticketId = ticketId,
+                        uri = Uri.parse(photo.uri),
+                        accessToken = token,
+                        publishableKey = BuildConfig.SUPABASE_KEY,
+                        index = index + 1
+                    )
+
+                if (uploadResult.isFailure) {
+                    _uiState.value = _uiState.value.copy(
+                        isSaving = false,
+                        errorMessage =
+                            uploadResult.exceptionOrNull()?.message
+                                ?: "El reporte se creó, pero falló una evidencia",
+                        successMessage = null
+                    )
+                    return@launch
+                }
+
+                val imagePath = uploadResult.getOrThrow()
+
+                val registerResult =
+                    repository.addEvidence(
+                        ticketId = ticketId,
+                        accessToken = token,
+                        imageUrl = imagePath
+                    )
+
+                if (registerResult.isFailure) {
+                    _uiState.value = _uiState.value.copy(
+                        isSaving = false,
+                        errorMessage =
+                            registerResult.exceptionOrNull()?.message
+                                ?: "La evidencia se subió, pero no pudo registrarse",
+                        successMessage = null
+                    )
+                    return@launch
+                }
+            }
+
+            // =========================================================
+            // PASO 6 - GUARDAR ESTADO LOCAL
+            // =========================================================
+
+            val localReport = DeliveryReport(
+                ticketId = ticketId,
+                items = currentState.items,
+                provider = response.provider,
+                receiverName = response.receiverName,
+                observations = response.observations.orEmpty(),
+                totalAmount = response.totalAmount,
+                signature = currentState.signature
+            )
+
+            _uiState.value = _uiState.value.copy(
+                isSaving = false,
+                savedReport = localReport,
+                successMessage = "Reporte completo guardado correctamente",
+                errorMessage = null
+            )
         }
     }
 
