@@ -13,6 +13,7 @@ import com.luisvicente.prontotix.ui.login.LoginScreen
 import com.luisvicente.prontotix.ui.ticketdetail.TicketDetailScreen
 import com.luisvicente.prontotix.ui.tickets.TicketsListScreen
 import com.luisvicente.prontotix.ui.deliveryreport.DeliveryReportScreen
+import com.luisvicente.prontotix.ui.location.LocationTestScreen
 
 @Composable
 fun AppNavigation(
@@ -25,7 +26,8 @@ fun AppNavigation(
         composable(AppRoute.LOGIN) {
             LoginScreen(
                 onLoginSuccess = {
-                    navController.navigate(AppRoute.TICKETS) {
+                    //navController.navigate(AppRoute.TICKETS) {
+                    navController.navigate(AppRoute.LOCATION_TEST) {
                         popUpTo(AppRoute.LOGIN) {
                             inclusive = true
                         }
@@ -106,6 +108,11 @@ fun AppNavigation(
                     navController.popBackStack()
                 }
             )
+        }
+
+        // Prueba temporal de GPS
+        composable(AppRoute.LOCATION_TEST) {
+            LocationTestScreen()
         }
     }
 }

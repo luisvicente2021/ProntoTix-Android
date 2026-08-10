@@ -14,6 +14,7 @@ import com.luisvicente.prontotix.data.model.DeliveryReportResponse
 import com.luisvicente.prontotix.data.model.UpdateDeliveryReportFilesRequest
 import retrofit2.http.PATCH
 import retrofit2.http.POST
+import com.luisvicente.prontotix.data.model.DriverLocationRequest
 
 interface TicketsApiService {
 
@@ -56,4 +57,10 @@ interface TicketsApiService {
         @Path("id") ticketId: Long,
         @Body request: UpdateDeliveryReportFilesRequest
     ): Response<DeliveryReportResponse>
+
+    @POST("api/driver-location")
+    suspend fun updateDriverLocation(
+        @Header("Authorization") authorization: String,
+        @Body request: DriverLocationRequest
+    ): Response<Unit>
 }
