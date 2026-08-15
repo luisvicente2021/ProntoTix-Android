@@ -16,7 +16,8 @@ data class TicketDetailUiState(
     val isUpdatingStatus: Boolean = false,
     val ticket: Ticket? = null,
     val errorMessage: String? = null,
-    val successMessage: String? = null
+    val successMessage: String? = null,
+    val lastUpdatedStatus: String? = null
 )
 
 class TicketDetailViewModel(
@@ -90,8 +91,10 @@ class TicketDetailViewModel(
             ).onSuccess { updatedTicket ->
                 _uiState.value = TicketDetailUiState(
                     ticket = updatedTicket,
-                    successMessage = "Estado actualizado correctamente"
+                    successMessage = "Estado actualizado correctamente",
+                    lastUpdatedStatus = newStatus
                 )
+
             }.onFailure { error ->
                 _uiState.value = _uiState.value.copy(
                     isUpdatingStatus = false,

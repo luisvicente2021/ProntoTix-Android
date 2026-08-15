@@ -26,8 +26,7 @@ fun AppNavigation(
         composable(AppRoute.LOGIN) {
             LoginScreen(
                 onLoginSuccess = {
-                    //navController.navigate(AppRoute.TICKETS) {
-                    navController.navigate(AppRoute.LOCATION_TEST) {
+                    navController.navigate(AppRoute.TICKETS) {
                         popUpTo(AppRoute.LOGIN) {
                             inclusive = true
                         }

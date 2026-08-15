@@ -36,6 +36,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.luisvicente.prontotix.data.local.SessionManager
 import com.luisvicente.prontotix.data.model.Ticket
+import android.content.Intent
+import androidx.core.content.ContextCompat
+import com.luisvicente.prontotix.service.LocationTrackingService
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,6 +53,44 @@ fun TicketDetailScreen(
     onOpenDeliveryReport: () -> Unit
 ) {
     val context = LocalContext.current
+
+    var pendingTrackingStart by remember {
+        mutableStateOf(false)
+    }
+
+    val locationPermissionLauncher =
+        rememberLauncherForActivityResult(
+            contract =
+                ActivityResultContracts.RequestMultiplePermissions()
+        ) { permissions ->
+
+            val fineGranted =
+                permissions[
+                    Manifest.permission.ACCESS_FINE_LOCATION
+                ] == true
+
+            val coarseGranted =
+                permissions[
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                ] == true
+
+            if (
+                pendingTrackingStart &&
+                (fineGranted || coarseGranted)
+            ) {
+                val intent = Intent(
+                    context,
+                    LocationTrackingService::class.java
+                )
+
+                ContextCompat.startForegroundService(
+                    context,
+                    intent
+                )
+            }
+
+            pendingTrackingStart = false
+        }
 
     val detailViewModel: TicketDetailViewModel = viewModel(
         key = "ticket-$ticketId",
@@ -64,9 +109,92 @@ fun TicketDetailScreen(
         mutableStateOf(false)
     }
 
-    LaunchedEffect(uiState.successMessage) {
-        if (uiState.successMessage != null) {
-            onStatusUpdated()
+    LaunchedEffect(uiState.lastUpdatedStatus) {
+
+        when (uiState.lastUpdatedStatus) {
+
+            "En Proceso" -> {
+
+                val fineGranted =
+                    ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.ACCESS_FINE_LOCATION
+                    ) ==
+                            PackageManager.PERMISSION_GRANTED
+
+                val coarseGranted =
+                    ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.ACCESS_COARSE_LOCATION
+                    ) ==
+                            PackageManager.PERMISSION_GRANTED
+
+                if (
+                    fineGranted ||
+                    coarseGranted
+                ) {
+
+                    val intent = Intent(
+                        context,
+                        LocationTrackingService::class.java
+                    )
+
+                    ContextCompat.startForegroundService(
+                        context,
+                        intent
+                    )
+
+                } else {
+
+                    pendingTrackingStart = true
+
+                    locationPermissionLauncher.launch(
+                        arrayOf(
+                            Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION
+                        )
+                    )
+                }
+            }
+
+            "Cerrada" -> {
+
+                val intent = Intent(
+                    context,
+                    LocationTrackingService::class.java
+                )
+
+                context.stopService(intent)
+            }
+        }
+    }
+
+    LaunchedEffect(uiState.lastUpdatedStatus) {
+
+        when (uiState.lastUpdatedStatus) {
+
+            "En Proceso" -> {
+
+                val intent = Intent(
+                    context,
+                    LocationTrackingService::class.java
+                )
+
+                ContextCompat.startForegroundService(
+                    context,
+                    intent
+                )
+            }
+
+            "Cerrada" -> {
+
+                val intent = Intent(
+                    context,
+                    LocationTrackingService::class.java
+                )
+
+                context.stopService(intent)
+            }
         }
     }
 

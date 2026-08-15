@@ -120,8 +120,8 @@ fun LoginScreen(
         Button(
             onClick = {
                 loginViewModel.login(
-                    email = "soporte@prontocheck.com",
-                    password = "S1st3m4!!.."
+                    email = email,
+                    password = password
                 )
             },
             enabled = !uiState.isLoading &&
