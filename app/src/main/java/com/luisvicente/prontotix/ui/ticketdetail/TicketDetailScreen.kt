@@ -1,5 +1,10 @@
 package com.luisvicente.prontotix.ui.ticketdetail
 
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,15 +14,18 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -32,17 +40,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.luisvicente.prontotix.data.local.SessionManager
 import com.luisvicente.prontotix.data.model.Ticket
-import android.content.Intent
-import androidx.core.content.ContextCompat
 import com.luisvicente.prontotix.service.LocationTrackingService
-import android.Manifest
-import android.content.pm.PackageManager
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -92,60 +95,68 @@ fun TicketDetailScreen(
             pendingTrackingStart = false
         }
 
-    val detailViewModel: TicketDetailViewModel = viewModel(
-        key = "ticket-$ticketId",
-        factory = TicketDetailViewModelFactory(
-            ticketId = ticketId,
-            sessionManager = SessionManager(
-                context.applicationContext
+    val detailViewModel: TicketDetailViewModel =
+        viewModel(
+            key = "ticket-$ticketId",
+            factory = TicketDetailViewModelFactory(
+                ticketId = ticketId,
+                sessionManager = SessionManager(
+                    context.applicationContext
+                )
             )
         )
-    )
 
     val uiState by
-    detailViewModel.uiState.collectAsStateWithLifecycle()
+    detailViewModel.uiState
+        .collectAsStateWithLifecycle()
 
     var showStatusDialog by remember {
         mutableStateOf(false)
     }
 
-    LaunchedEffect(uiState.lastUpdatedStatus) {
-
-        when (uiState.lastUpdatedStatus) {
-
+    LaunchedEffect(
+        uiState.lastUpdatedStatus
+    ) {
+        when (
+            uiState.lastUpdatedStatus
+        ) {
             "En Proceso" -> {
 
                 val fineGranted =
-                    ContextCompat.checkSelfPermission(
-                        context,
-                        Manifest.permission.ACCESS_FINE_LOCATION
-                    ) ==
-                            PackageManager.PERMISSION_GRANTED
+                    ContextCompat
+                        .checkSelfPermission(
+                            context,
+                            Manifest.permission
+                                .ACCESS_FINE_LOCATION
+                        ) ==
+                            PackageManager
+                                .PERMISSION_GRANTED
 
                 val coarseGranted =
-                    ContextCompat.checkSelfPermission(
-                        context,
-                        Manifest.permission.ACCESS_COARSE_LOCATION
-                    ) ==
-                            PackageManager.PERMISSION_GRANTED
+                    ContextCompat
+                        .checkSelfPermission(
+                            context,
+                            Manifest.permission
+                                .ACCESS_COARSE_LOCATION
+                        ) ==
+                            PackageManager
+                                .PERMISSION_GRANTED
 
                 if (
                     fineGranted ||
                     coarseGranted
                 ) {
-
                     val intent = Intent(
                         context,
                         LocationTrackingService::class.java
                     )
 
-                    ContextCompat.startForegroundService(
-                        context,
-                        intent
-                    )
-
+                    ContextCompat
+                        .startForegroundService(
+                            context,
+                            intent
+                        )
                 } else {
-
                     pendingTrackingStart = true
 
                     locationPermissionLauncher.launch(
@@ -158,7 +169,6 @@ fun TicketDetailScreen(
             }
 
             "Cerrada" -> {
-
                 val intent = Intent(
                     context,
                     LocationTrackingService::class.java
@@ -169,32 +179,13 @@ fun TicketDetailScreen(
         }
     }
 
-    LaunchedEffect(uiState.lastUpdatedStatus) {
-
-        when (uiState.lastUpdatedStatus) {
-
-            "En Proceso" -> {
-
-                val intent = Intent(
-                    context,
-                    LocationTrackingService::class.java
-                )
-
-                ContextCompat.startForegroundService(
-                    context,
-                    intent
-                )
-            }
-
-            "Cerrada" -> {
-
-                val intent = Intent(
-                    context,
-                    LocationTrackingService::class.java
-                )
-
-                context.stopService(intent)
-            }
+    LaunchedEffect(
+        uiState.successMessage
+    ) {
+        if (
+            uiState.successMessage != null
+        ) {
+            onStatusUpdated()
         }
     }
 
@@ -202,7 +193,26 @@ fun TicketDetailScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text("Detalle de la asignación")
+                    Column {
+                        Text(
+                            text = "Detalle de diligencia",
+                            fontWeight =
+                                FontWeight.Bold
+                        )
+
+                        Text(
+                            text =
+                                "Folio #$ticketId",
+                            style =
+                                MaterialTheme
+                                    .typography
+                                    .bodySmall,
+                            color =
+                                MaterialTheme
+                                    .colorScheme
+                                    .onSurfaceVariant
+                        )
+                    }
                 },
                 navigationIcon = {
                     TextButton(
@@ -221,8 +231,10 @@ fun TicketDetailScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(paddingValues),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    verticalArrangement =
+                        Arrangement.Center,
+                    horizontalAlignment =
+                        Alignment.CenterHorizontally
                 ) {
                     CircularProgressIndicator()
                 }
@@ -236,20 +248,45 @@ fun TicketDetailScreen(
                         .fillMaxSize()
                         .padding(paddingValues)
                         .padding(24.dp),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    verticalArrangement =
+                        Arrangement.Center,
+                    horizontalAlignment =
+                        Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = uiState.errorMessage.orEmpty(),
-                        color = MaterialTheme.colorScheme.error
+                        text =
+                            "No pudimos cargar la diligencia",
+                        style =
+                            MaterialTheme
+                                .typography
+                                .titleLarge,
+                        fontWeight =
+                            FontWeight.Bold
                     )
 
                     Spacer(
-                        modifier = Modifier.height(16.dp)
+                        modifier =
+                            Modifier.height(8.dp)
+                    )
+
+                    Text(
+                        text =
+                            uiState.errorMessage
+                                .orEmpty(),
+                        color =
+                            MaterialTheme
+                                .colorScheme
+                                .error
+                    )
+
+                    Spacer(
+                        modifier =
+                            Modifier.height(20.dp)
                     )
 
                     Button(
-                        onClick = detailViewModel::loadTicket
+                        onClick =
+                            detailViewModel::loadTicket
                     ) {
                         Text("Reintentar")
                     }
@@ -258,17 +295,27 @@ fun TicketDetailScreen(
 
             uiState.ticket != null -> {
                 TicketDetailContent(
-                    ticket = uiState.ticket!!,
-                    isUpdatingStatus = uiState.isUpdatingStatus,
-                    successMessage = uiState.successMessage,
-                    errorMessage = uiState.errorMessage,
+                    ticket =
+                        uiState.ticket!!,
+                    isUpdatingStatus =
+                        uiState
+                            .isUpdatingStatus,
+                    successMessage =
+                        uiState
+                            .successMessage,
+                    errorMessage =
+                        uiState
+                            .errorMessage,
                     onChangeStatus = {
                         showStatusDialog = true
                     },
-                    onOpenDeliveryReport = onOpenDeliveryReport,
+                    onOpenDeliveryReport =
+                        onOpenDeliveryReport,
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(paddingValues)
+                        .padding(
+                            paddingValues
+                        )
                 )
             }
         }
@@ -276,13 +323,16 @@ fun TicketDetailScreen(
 
     if (showStatusDialog) {
         StatusDialog(
-            currentStatus = uiState.ticket?.status,
+            currentStatus =
+                uiState.ticket?.status,
             onDismiss = {
                 showStatusDialog = false
             },
             onStatusSelected = { status ->
                 showStatusDialog = false
-                detailViewModel.updateStatus(status)
+
+                detailViewModel
+                    .updateStatus(status)
             }
         )
     }
@@ -297,144 +347,375 @@ private fun TicketDetailContent(
     onChangeStatus: () -> Unit,
     onOpenDeliveryReport: () -> Unit,
     modifier: Modifier = Modifier
-){
+) {
     Column(
         modifier = modifier
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(
+                rememberScrollState()
+            )
             .padding(16.dp)
     ) {
-        Text(
-            text = ticket.title ?: "Asignación sin título",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold
-        )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Row(
+            modifier =
+                Modifier.fillMaxWidth(),
+            horizontalArrangement =
+                Arrangement.SpaceBetween,
+            verticalAlignment =
+                Alignment.CenterVertically
+        ) {
+            Column(
+                modifier =
+                    Modifier.weight(1f)
+            ) {
+                Text(
+                    text =
+                        ticket.title
+                            ?: "Diligencia sin título",
+                    style =
+                        MaterialTheme
+                            .typography
+                            .headlineSmall,
+                    fontWeight =
+                        FontWeight.Bold
+                )
+
+                ticket.clientName
+                    ?.takeIf {
+                        it.isNotBlank()
+                    }
+                    ?.let { client ->
+                        Spacer(
+                            modifier =
+                                Modifier.height(
+                                    4.dp
+                                )
+                        )
+
+                        Text(
+                            text = client,
+                            color =
+                                MaterialTheme
+                                    .colorScheme
+                                    .onSurfaceVariant
+                        )
+                    }
+            }
+
+            StatusBadge(
+                status = ticket.status
+            )
+        }
+
+        if (
+            ticket.status
+                ?.equals(
+                    "En Proceso",
+                    ignoreCase = true
+                ) == true
+        ) {
+            Spacer(
+                modifier =
+                    Modifier.height(14.dp)
+            )
+
+            TrackingCard()
+        }
+
+        Spacer(
+            modifier =
+                Modifier.height(18.dp)
+        )
 
         DetailCard(
             title = "Información general"
         ) {
             DetailField(
                 label = "Folio",
-                value = ticket.id?.toString()
-            )
-
-            DetailField(
-                label = "Residencial",
-                value = ticket.clientName
+                value =
+                    ticket.id
+                        ?.toString()
             )
 
             DetailField(
                 label = "Estado",
-                value = statusLabel(
-                    ticket.status ?: "Sin estado"
-                )
+                value =
+                    statusLabel(
+                        ticket.status
+                            ?: "Sin estado"
+                    )
             )
 
             DetailField(
                 label = "Prioridad",
-                value = ticket.priority
+                value =
+                    ticket.priority
             )
 
             DetailField(
-                label = "Fecha de apertura",
-                value = formatTicketDate(
-                    ticket.openedAt
-                )
+                label = "Fecha",
+                value =
+                    formatTicketDate(
+                        ticket.openedAt
+                    )
             )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(
+            modifier =
+                Modifier.height(14.dp)
+        )
 
         DetailCard(
-            title = "Reporte"
+            title = "Solicitud"
         ) {
             DetailField(
-                label = "Reportó",
-                value = ticket.reportedBy
+                label = "Solicitante",
+                value =
+                    ticket.reportedBy
             )
 
             DetailField(
-                label = "Departamento",
-                value = ticket.department
+                label = "Área",
+                value =
+                    ticket.department
             )
 
             DetailField(
                 label = "Puesto",
-                value = ticket.jobTitle
+                value =
+                    ticket.jobTitle
             )
 
             DetailField(
                 label = "Teléfono",
-                value = ticket.reporterPhone
+                value =
+                    ticket.reporterPhone
             )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(
+            modifier =
+                Modifier.height(14.dp)
+        )
 
         DetailCard(
             title = "Descripción"
         ) {
             Text(
-                text = ticket.description
-                    ?: "Sin descripción"
+                text =
+                    ticket.description
+                        ?: "Sin descripción",
+                style =
+                    MaterialTheme
+                        .typography
+                        .bodyLarge
             )
         }
 
-        ticket.closedAt?.let { closedAt ->
-            Spacer(modifier = Modifier.height(16.dp))
+        ticket.closedAt?.let {
+                closedAt ->
+
+            Spacer(
+                modifier =
+                    Modifier.height(14.dp)
+            )
 
             DetailCard(
                 title = "Cierre"
             ) {
                 DetailField(
-                    label = "Fecha de cierre",
-                    value = formatTicketDate(closedAt)
+                    label =
+                        "Fecha de cierre",
+                    value =
+                        formatTicketDate(
+                            closedAt
+                        )
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        successMessage?.let {
+                message ->
 
-        successMessage?.let { message ->
-            Text(
-                text = message,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.SemiBold
+            Spacer(
+                modifier =
+                    Modifier.height(16.dp)
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
-        }
-
-        errorMessage?.let { message ->
-            Text(
-                text = message,
-                color = MaterialTheme.colorScheme.error,
-                fontWeight = FontWeight.SemiBold
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-        }
-
-        Button(
-            onClick = onChangeStatus,
-            enabled = !isUpdatingStatus,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            if (isUpdatingStatus) {
-                CircularProgressIndicator()
-            } else {
-                Text("Cambiar estado")
+            Surface(
+                shape =
+                    RoundedCornerShape(
+                        14.dp
+                    ),
+                color =
+                    MaterialTheme
+                        .colorScheme
+                        .primaryContainer,
+                modifier =
+                    Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = message,
+                    modifier =
+                        Modifier.padding(
+                            14.dp
+                        ),
+                    color =
+                        MaterialTheme
+                            .colorScheme
+                            .onPrimaryContainer,
+                    fontWeight =
+                        FontWeight.SemiBold
+                )
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        errorMessage?.let {
+                message ->
+
+            Spacer(
+                modifier =
+                    Modifier.height(16.dp)
+            )
+
+            Surface(
+                shape =
+                    RoundedCornerShape(
+                        14.dp
+                    ),
+                color =
+                    MaterialTheme
+                        .colorScheme
+                        .errorContainer,
+                modifier =
+                    Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = message,
+                    modifier =
+                        Modifier.padding(
+                            14.dp
+                        ),
+                    color =
+                        MaterialTheme
+                            .colorScheme
+                            .onErrorContainer
+                )
+            }
+        }
+
+        Spacer(
+            modifier =
+                Modifier.height(24.dp)
+        )
 
         Button(
-            onClick = onOpenDeliveryReport,
-            modifier = Modifier.fillMaxWidth()
+            onClick =
+                onChangeStatus,
+            enabled =
+                !isUpdatingStatus,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp),
+            shape =
+                RoundedCornerShape(
+                    14.dp
+                )
         ) {
-            Text("Agregar reporte de entrega")
+            if (
+                isUpdatingStatus
+            ) {
+                CircularProgressIndicator(
+                    strokeWidth = 2.dp,
+                    color =
+                        MaterialTheme
+                            .colorScheme
+                            .onPrimary
+                )
+            } else {
+                Text(
+                    text =
+                        "Cambiar estado",
+                    fontWeight =
+                        FontWeight.SemiBold
+                )
+            }
+        }
+
+        Spacer(
+            modifier =
+                Modifier.height(10.dp)
+        )
+
+        OutlinedButton(
+            onClick =
+                onOpenDeliveryReport,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp),
+            shape =
+                RoundedCornerShape(
+                    14.dp
+                )
+        ) {
+            Text(
+                text =
+                    "Reporte de entrega"
+            )
+        }
+
+        Spacer(
+            modifier =
+                Modifier.height(24.dp)
+        )
+    }
+}
+
+@Composable
+private fun TrackingCard() {
+    Surface(
+        shape =
+            RoundedCornerShape(16.dp),
+        color =
+            MaterialTheme
+                .colorScheme
+                .primaryContainer,
+        modifier =
+            Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier =
+                Modifier.padding(16.dp)
+        ) {
+            Text(
+                text =
+                    "📍 Seguimiento activo",
+                fontWeight =
+                    FontWeight.Bold,
+                color =
+                    MaterialTheme
+                        .colorScheme
+                        .onPrimaryContainer
+            )
+
+            Spacer(
+                modifier =
+                    Modifier.height(4.dp)
+            )
+
+            Text(
+                text =
+                    "Tu ubicación se está compartiendo mientras esta diligencia está en progreso.",
+                style =
+                    MaterialTheme
+                        .typography
+                        .bodyMedium,
+                color =
+                    MaterialTheme
+                        .colorScheme
+                        .onPrimaryContainer
+            )
         }
     }
 }
@@ -445,18 +726,33 @@ private fun DetailCard(
     content: @Composable () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth()
+        modifier =
+            Modifier.fillMaxWidth(),
+        shape =
+            RoundedCornerShape(18.dp),
+        elevation =
+            CardDefaults.cardElevation(
+                defaultElevation = 1.dp
+            )
     ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier =
+                Modifier.padding(16.dp)
         ) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
+                style =
+                    MaterialTheme
+                        .typography
+                        .titleMedium,
+                fontWeight =
+                    FontWeight.Bold
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(
+                modifier =
+                    Modifier.height(12.dp)
+            )
 
             content()
         }
@@ -468,19 +764,111 @@ private fun DetailField(
     label: String,
     value: String?
 ) {
-    if (!value.isNullOrBlank()) {
+    if (
+        !value.isNullOrBlank()
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 4.dp)
+                .padding(
+                    vertical = 5.dp
+                )
         ) {
             Text(
-                text = "$label: ",
-                fontWeight = FontWeight.SemiBold
+                text = "$label:",
+                fontWeight =
+                    FontWeight.SemiBold,
+                modifier =
+                    Modifier.weight(
+                        0.42f
+                    )
             )
 
-            Text(text = value)
+            Text(
+                text = value,
+                modifier =
+                    Modifier.weight(
+                        0.58f
+                    )
+            )
         }
+    }
+}
+
+@Composable
+private fun StatusBadge(
+    status: String?
+) {
+    val normalized =
+        status
+            ?.trim()
+            ?.lowercase()
+            .orEmpty()
+
+    val label =
+        when (normalized) {
+            "abierta",
+            "abierto" ->
+                "Pendiente"
+
+            "en proceso" ->
+                "En progreso"
+
+            "cerrada",
+            "cerrado",
+            "terminada" ->
+                "Terminada"
+
+            else ->
+                status
+                    ?: "Sin estado"
+        }
+
+    val background =
+        when (normalized) {
+            "abierta",
+            "abierto" ->
+                MaterialTheme
+                    .colorScheme
+                    .errorContainer
+
+            "en proceso" ->
+                MaterialTheme
+                    .colorScheme
+                    .tertiaryContainer
+
+            "cerrada",
+            "cerrado",
+            "terminada" ->
+                MaterialTheme
+                    .colorScheme
+                    .primaryContainer
+
+            else ->
+                MaterialTheme
+                    .colorScheme
+                    .surfaceVariant
+        }
+
+    Surface(
+        shape =
+            RoundedCornerShape(50),
+        color = background
+    ) {
+        Text(
+            text = label,
+            modifier =
+                Modifier.padding(
+                    horizontal = 10.dp,
+                    vertical = 6.dp
+                ),
+            style =
+                MaterialTheme
+                    .typography
+                    .labelMedium,
+            fontWeight =
+                FontWeight.SemiBold
+        )
     }
 }
 
@@ -488,7 +876,8 @@ private fun DetailField(
 private fun StatusDialog(
     currentStatus: String?,
     onDismiss: () -> Unit,
-    onStatusSelected: (String) -> Unit
+    onStatusSelected:
+        (String) -> Unit
 ) {
     val statuses = listOf(
         "Abierta",
@@ -497,25 +886,53 @@ private fun StatusDialog(
     )
 
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest =
+            onDismiss,
         title = {
-            Text("Cambiar estado")
+            Text(
+                text =
+                    "Actualizar diligencia"
+            )
         },
         text = {
             Column(
                 verticalArrangement =
-                    Arrangement.spacedBy(8.dp)
+                    Arrangement
+                        .spacedBy(8.dp)
             ) {
-                statuses.forEach { status ->
+                Text(
+                    text =
+                        "Selecciona el nuevo estado."
+                )
+
+                Spacer(
+                    modifier =
+                        Modifier.height(
+                            4.dp
+                        )
+                )
+
+                statuses.forEach {
+                        status ->
+
                     OutlinedButton(
                         onClick = {
-                            onStatusSelected(status)
+                            onStatusSelected(
+                                status
+                            )
                         },
-                        enabled = status != currentStatus,
-                        modifier = Modifier.fillMaxWidth()
+                        enabled =
+                            status !=
+                                    currentStatus,
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
                     ) {
                         Text(
-                            text = statusLabel(status)
+                            text =
+                                statusLabel(
+                                    status
+                                )
                         )
                     }
                 }
@@ -524,7 +941,8 @@ private fun StatusDialog(
         confirmButton = {},
         dismissButton = {
             TextButton(
-                onClick = onDismiss
+                onClick =
+                    onDismiss
             ) {
                 Text("Cancelar")
             }
@@ -532,37 +950,60 @@ private fun StatusDialog(
     )
 }
 
-private fun statusLabel(status: String): String {
+private fun statusLabel(
+    status: String
+): String {
     return when (status) {
-        "Abierta" -> "Abierto"
-        "En Proceso" -> "En progreso"
-        "Cerrada" -> "Terminada"
-        else -> status
+        "Abierta" ->
+            "Pendiente"
+
+        "En Proceso" ->
+            "En progreso"
+
+        "Cerrada" ->
+            "Terminada"
+
+        else ->
+            status
     }
 }
 
 private fun formatTicketDate(
     date: String?
 ): String {
-    if (date.isNullOrBlank()) {
+    if (
+        date.isNullOrBlank()
+    ) {
         return "Sin fecha"
     }
 
     return try {
-        val instant = java.time.Instant.parse(date)
+        val instant =
+            java.time.Instant
+                .parse(date)
 
         val formatter =
-            java.time.format.DateTimeFormatter
-                .ofPattern("dd MMM yyyy, HH:mm")
+            java.time.format
+                .DateTimeFormatter
+                .ofPattern(
+                    "dd MMM yyyy · HH:mm"
+                )
                 .withLocale(
-                    java.util.Locale("es", "MX")
+                    java.util.Locale(
+                        "es",
+                        "MX"
+                    )
                 )
                 .withZone(
-                    java.time.ZoneId.systemDefault()
+                    java.time.ZoneId
+                        .systemDefault()
                 )
 
         formatter.format(instant)
-    } catch (_: Exception) {
+
+    } catch (
+        _: Exception
+    ) {
         date
     }
 }
