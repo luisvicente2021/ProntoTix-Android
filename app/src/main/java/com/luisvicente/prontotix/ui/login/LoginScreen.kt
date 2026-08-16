@@ -36,6 +36,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.platform.LocalContext
 import com.luisvicente.prontotix.data.local.SessionManager
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.res.painterResource
+import com.luisvicente.prontotix.R
+import androidx.compose.ui.graphics.Color
 
 @Composable
 fun LoginScreen(
@@ -72,7 +77,7 @@ fun LoginScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(
-                MaterialTheme.colorScheme.surfaceVariant
+                MaterialTheme.colorScheme.background
             ),
         contentAlignment = Alignment.Center
     ) {
@@ -82,15 +87,27 @@ fun LoginScreen(
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Image(
+                painter = painterResource(
+                    id = R.drawable.prontotix_logo
+                ),
+                contentDescription = "Logo ProntoTix",
+                modifier = Modifier.size(110.dp)
+            )
+
+            Spacer(
+                modifier = Modifier.height(10.dp)
+            )
+
             Text(
                 text = "ProntoTix",
-                style = MaterialTheme.typography.displaySmall,
+                style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
             )
 
             Spacer(
-                modifier = Modifier.height(6.dp)
+                modifier = Modifier.height(4.dp)
             )
 
             Text(

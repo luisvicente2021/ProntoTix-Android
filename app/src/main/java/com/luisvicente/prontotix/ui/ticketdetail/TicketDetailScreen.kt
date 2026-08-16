@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -29,6 +30,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -190,8 +192,17 @@ fun TicketDetailScreen(
     }
 
     Scaffold(
+        containerColor =
+            MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
+                colors =
+                    TopAppBarDefaults.topAppBarColors(
+                        containerColor =
+                            MaterialTheme
+                                .colorScheme
+                                .surface
+                    ),
                 title = {
                     Column {
                         Text(
@@ -230,7 +241,14 @@ fun TicketDetailScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(paddingValues),
+                        .background(
+                            MaterialTheme
+                                .colorScheme
+                                .background
+                        )
+                        .padding(
+                            paddingValues
+                        ),
                     verticalArrangement =
                         Arrangement.Center,
                     horizontalAlignment =
@@ -246,7 +264,14 @@ fun TicketDetailScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(paddingValues)
+                        .background(
+                            MaterialTheme
+                                .colorScheme
+                                .background
+                        )
+                        .padding(
+                            paddingValues
+                        )
                         .padding(24.dp),
                     verticalArrangement =
                         Arrangement.Center,
@@ -350,6 +375,11 @@ private fun TicketDetailContent(
 ) {
     Column(
         modifier = modifier
+            .background(
+                MaterialTheme
+                    .colorScheme
+                    .background
+            )
             .verticalScroll(
                 rememberScrollState()
             )
@@ -730,9 +760,16 @@ private fun DetailCard(
             Modifier.fillMaxWidth(),
         shape =
             RoundedCornerShape(18.dp),
+        colors =
+            CardDefaults.cardColors(
+                containerColor =
+                    MaterialTheme
+                        .colorScheme
+                        .surface
+            ),
         elevation =
             CardDefaults.cardElevation(
-                defaultElevation = 1.dp
+                defaultElevation = 2.dp
             )
     ) {
         Column(
@@ -842,7 +879,7 @@ private fun StatusBadge(
             "terminada" ->
                 MaterialTheme
                     .colorScheme
-                    .primaryContainer
+                    .secondaryContainer
 
             else ->
                 MaterialTheme
