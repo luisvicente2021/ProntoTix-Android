@@ -15,6 +15,8 @@ import com.luisvicente.prontotix.data.model.UpdateDeliveryReportFilesRequest
 import retrofit2.http.PATCH
 import retrofit2.http.POST
 import com.luisvicente.prontotix.data.model.DriverLocationRequest
+import com.luisvicente.prontotix.data.model.DriverShift
+import com.luisvicente.prontotix.data.model.ActiveDriverShiftResponse
 
 interface TicketsApiService {
 
@@ -63,4 +65,19 @@ interface TicketsApiService {
         @Header("Authorization") authorization: String,
         @Body request: DriverLocationRequest
     ): Response<Unit>
+
+    @POST("api/driver-shifts/start")
+    suspend fun startDriverShift(
+        @Header("Authorization") authorization: String
+    ): Response<DriverShift>
+
+    @GET("api/driver-shifts/active")
+    suspend fun getActiveDriverShift(
+        @Header("Authorization") authorization: String
+    ): Response<ActiveDriverShiftResponse>
+
+    @POST("api/driver-shifts/end")
+    suspend fun endDriverShift(
+        @Header("Authorization") authorization: String
+    ): Response<DriverShift>
 }

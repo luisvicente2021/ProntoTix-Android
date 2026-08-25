@@ -198,7 +198,7 @@ class LocationTrackingService : Service() {
                 "ProntoTix"
             )
             .setContentText(
-                "Compartiendo ubicación durante la diligencia"
+                "Jornada activa · Compartiendo ubicación"
             )
             .setSmallIcon(
                 R.drawable
