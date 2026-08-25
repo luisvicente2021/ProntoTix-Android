@@ -1,10 +1,6 @@
 package com.luisvicente.prontotix.ui.ticketdetail
 
-import android.Manifest
-import android.content.Intent
-import android.content.pm.PackageManager
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -42,12 +38,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.luisvicente.prontotix.data.local.SessionManager
 import com.luisvicente.prontotix.data.model.Ticket
-import com.luisvicente.prontotix.service.LocationTrackingService
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,44 +52,6 @@ fun TicketDetailScreen(
     onOpenDeliveryReport: () -> Unit
 ) {
     val context = LocalContext.current
-
-    var pendingTrackingStart by remember {
-        mutableStateOf(false)
-    }
-
-    val locationPermissionLauncher =
-        rememberLauncherForActivityResult(
-            contract =
-                ActivityResultContracts.RequestMultiplePermissions()
-        ) { permissions ->
-
-            val fineGranted =
-                permissions[
-                    Manifest.permission.ACCESS_FINE_LOCATION
-                ] == true
-
-            val coarseGranted =
-                permissions[
-                    Manifest.permission.ACCESS_COARSE_LOCATION
-                ] == true
-
-            if (
-                pendingTrackingStart &&
-                (fineGranted || coarseGranted)
-            ) {
-                val intent = Intent(
-                    context,
-                    LocationTrackingService::class.java
-                )
-
-                ContextCompat.startForegroundService(
-                    context,
-                    intent
-                )
-            }
-
-            pendingTrackingStart = false
-        }
 
     val detailViewModel: TicketDetailViewModel =
         viewModel(
@@ -114,71 +70,6 @@ fun TicketDetailScreen(
 
     var showStatusDialog by remember {
         mutableStateOf(false)
-    }
-
-    LaunchedEffect(
-        uiState.lastUpdatedStatus
-    ) {
-        when (
-            uiState.lastUpdatedStatus
-        ) {
-            "En Proceso" -> {
-
-                val fineGranted =
-                    ContextCompat
-                        .checkSelfPermission(
-                            context,
-                            Manifest.permission
-                                .ACCESS_FINE_LOCATION
-                        ) ==
-                            PackageManager
-                                .PERMISSION_GRANTED
-
-                val coarseGranted =
-                    ContextCompat
-                        .checkSelfPermission(
-                            context,
-                            Manifest.permission
-                                .ACCESS_COARSE_LOCATION
-                        ) ==
-                            PackageManager
-                                .PERMISSION_GRANTED
-
-                if (
-                    fineGranted ||
-                    coarseGranted
-                ) {
-                    val intent = Intent(
-                        context,
-                        LocationTrackingService::class.java
-                    )
-
-                    ContextCompat
-                        .startForegroundService(
-                            context,
-                            intent
-                        )
-                } else {
-                    pendingTrackingStart = true
-
-                    locationPermissionLauncher.launch(
-                        arrayOf(
-                            Manifest.permission.ACCESS_FINE_LOCATION,
-                            Manifest.permission.ACCESS_COARSE_LOCATION
-                        )
-                    )
-                }
-            }
-
-            "Cerrada" -> {
-                val intent = Intent(
-                    context,
-                    LocationTrackingService::class.java
-                )
-
-                context.stopService(intent)
-            }
-        }
     }
 
     LaunchedEffect(
@@ -437,21 +328,6 @@ private fun TicketDetailContent(
             )
         }
 
-        if (
-            ticket.status
-                ?.equals(
-                    "En Proceso",
-                    ignoreCase = true
-                ) == true
-        ) {
-            Spacer(
-                modifier =
-                    Modifier.height(14.dp)
-            )
-
-            TrackingCard()
-        }
-
         Spacer(
             modifier =
                 Modifier.height(18.dp)
@@ -703,54 +579,6 @@ private fun TicketDetailContent(
 }
 
 @Composable
-private fun TrackingCard() {
-    Surface(
-        shape =
-            RoundedCornerShape(16.dp),
-        color =
-            MaterialTheme
-                .colorScheme
-                .primaryContainer,
-        modifier =
-            Modifier.fillMaxWidth()
-    ) {
-        Column(
-            modifier =
-                Modifier.padding(16.dp)
-        ) {
-            Text(
-                text =
-                    "📍 Seguimiento activo",
-                fontWeight =
-                    FontWeight.Bold,
-                color =
-                    MaterialTheme
-                        .colorScheme
-                        .onPrimaryContainer
-            )
-
-            Spacer(
-                modifier =
-                    Modifier.height(4.dp)
-            )
-
-            Text(
-                text =
-                    "Tu ubicación se está compartiendo mientras esta diligencia está en progreso.",
-                style =
-                    MaterialTheme
-                        .typography
-                        .bodyMedium,
-                color =
-                    MaterialTheme
-                        .colorScheme
-                        .onPrimaryContainer
-            )
-        }
-    }
-}
-
-@Composable
 private fun DetailCard(
     title: String,
     content: @Composable () -> Unit
@@ -851,6 +679,8 @@ private fun StatusBadge(
             "en proceso" ->
                 "En progreso"
 
+            "pendiente aprobacion" ->
+                "Pendiente de aprobación"
             "cerrada",
             "cerrado",
             "terminada" ->
@@ -863,6 +693,7 @@ private fun StatusBadge(
 
     val background =
         when (normalized) {
+
             "abierta",
             "abierto" ->
                 MaterialTheme
@@ -873,6 +704,11 @@ private fun StatusBadge(
                 MaterialTheme
                     .colorScheme
                     .tertiaryContainer
+
+            "pendiente aprobacion" ->
+                MaterialTheme
+                    .colorScheme
+                    .primaryContainer
 
             "cerrada",
             "cerrado",
@@ -913,30 +749,27 @@ private fun StatusBadge(
 private fun StatusDialog(
     currentStatus: String?,
     onDismiss: () -> Unit,
-    onStatusSelected:
-        (String) -> Unit
+    onStatusSelected: (String) -> Unit
 ) {
     val statuses = listOf(
         "Abierta",
         "En Proceso",
-        "Cerrada"
+        "Pendiente Aprobacion"
     )
 
     AlertDialog(
-        onDismissRequest =
-            onDismiss,
+        onDismissRequest = onDismiss,
         title = {
             Text(
-                text =
-                    "Actualizar diligencia"
+                text = "Actualizar diligencia"
             )
         },
         text = {
             Column(
                 verticalArrangement =
-                    Arrangement
-                        .spacedBy(8.dp)
+                    Arrangement.spacedBy(8.dp)
             ) {
+
                 Text(
                     text =
                         "Selecciona el nuevo estado."
@@ -944,32 +777,23 @@ private fun StatusDialog(
 
                 Spacer(
                     modifier =
-                        Modifier.height(
-                            4.dp
-                        )
+                        Modifier.height(4.dp)
                 )
 
-                statuses.forEach {
-                        status ->
+                statuses.forEach { status ->
 
                     OutlinedButton(
                         onClick = {
-                            onStatusSelected(
-                                status
-                            )
+                            onStatusSelected(status)
                         },
                         enabled =
-                            status !=
-                                    currentStatus,
+                            status != currentStatus,
                         modifier =
-                            Modifier
-                                .fillMaxWidth()
+                            Modifier.fillMaxWidth()
                     ) {
                         Text(
                             text =
-                                statusLabel(
-                                    status
-                                )
+                                statusLabel(status)
                         )
                     }
                 }
@@ -978,8 +802,7 @@ private fun StatusDialog(
         confirmButton = {},
         dismissButton = {
             TextButton(
-                onClick =
-                    onDismiss
+                onClick = onDismiss
             ) {
                 Text("Cancelar")
             }
@@ -991,11 +814,15 @@ private fun statusLabel(
     status: String
 ): String {
     return when (status) {
+
         "Abierta" ->
             "Pendiente"
 
         "En Proceso" ->
             "En progreso"
+
+        "Pendiente Aprobacion" ->
+            "Enviar a aprobación"
 
         "Cerrada" ->
             "Terminada"
