@@ -45,7 +45,10 @@ class LoginViewModel(
                             errorMessage = "Supabase no devolvió el token"
                         )
                     } else {
-                        sessionManager.saveAccessToken(token)
+                        sessionManager.saveSession(
+                            accessToken = token,
+                            refreshToken = response.refresh_token
+                        )
 
                         _uiState.value = LoginUiState(
                             isSuccess = true,

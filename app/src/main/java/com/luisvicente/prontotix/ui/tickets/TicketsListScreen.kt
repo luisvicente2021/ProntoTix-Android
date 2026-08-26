@@ -5,19 +5,13 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -28,6 +22,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -35,6 +30,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,8 +41,8 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.luisvicente.prontotix.data.local.SessionManager
-import com.luisvicente.prontotix.data.model.Ticket
 import com.luisvicente.prontotix.service.LocationTrackingService
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,18 +50,26 @@ fun TicketsListScreen(
     refreshTrigger: Boolean = false,
     onRefreshHandled: () -> Unit = {},
     onTicketClick: (Long) -> Unit = {},
-    onCreateTicket: () -> Unit = {}
+    onCreateTicket: () -> Unit = {},
+    onLogout: () -> Unit = {}
 ) {
     val context = LocalContext.current
+
+    val sessionManager = remember {
+        SessionManager(
+            context.applicationContext
+        )
+    }
+
+    val coroutineScope =
+        rememberCoroutineScope()
 
     val ticketsViewModel: TicketsViewModel =
         viewModel(
             factory =
                 TicketsViewModelFactory(
                     sessionManager =
-                        SessionManager(
-                            context.applicationContext
-                        )
+                        sessionManager
                 )
         )
 
@@ -78,118 +82,140 @@ fun TicketsListScreen(
     }
 
     /*
-     * Si el usuario todavía no dio permisos de ubicación,
-     * los pedimos cuando inicia su jornada.
+     * Si todavía no existen permisos de ubicación,
+     * los solicitamos cuando inicia la jornada.
      */
     val locationPermissionLauncher =
         rememberLauncherForActivityResult(
             contract =
-                ActivityResultContracts.RequestMultiplePermissions()
+                ActivityResultContracts
+                    .RequestMultiplePermissions()
         ) { permissions ->
 
             val fineGranted =
                 permissions[
-                    Manifest.permission.ACCESS_FINE_LOCATION
+                    Manifest.permission
+                        .ACCESS_FINE_LOCATION
                 ] == true
 
             val coarseGranted =
                 permissions[
-                    Manifest.permission.ACCESS_COARSE_LOCATION
+                    Manifest.permission
+                        .ACCESS_COARSE_LOCATION
                 ] == true
 
             if (
                 pendingShiftStart &&
                 (fineGranted || coarseGranted)
             ) {
-                val intent = Intent(
-                    context,
-                    LocationTrackingService::class.java
-                )
+                val intent =
+                    Intent(
+                        context,
+                        LocationTrackingService::class.java
+                    )
 
-                ContextCompat.startForegroundService(
-                    context,
-                    intent
-                )
+                ContextCompat
+                    .startForegroundService(
+                        context,
+                        intent
+                    )
             }
 
             pendingShiftStart = false
         }
 
     /*
-     * Cuando el backend nos confirma que existe
-     * una jornada activa, iniciamos el servicio GPS.
-     *
-     * IMPORTANTE:
-     * ya no depende de una diligencia "En Proceso".
+     * Si el backend confirma que existe
+     * una jornada activa, mantenemos
+     * funcionando el servicio GPS.
      */
     LaunchedEffect(
         uiState.isShiftActive,
         uiState.shiftMessage
     ) {
+
         if (uiState.isShiftActive) {
 
             val fineGranted =
                 ContextCompat.checkSelfPermission(
                     context,
-                    Manifest.permission.ACCESS_FINE_LOCATION
+                    Manifest.permission
+                        .ACCESS_FINE_LOCATION
                 ) ==
-                        PackageManager.PERMISSION_GRANTED
+                        PackageManager
+                            .PERMISSION_GRANTED
 
             val coarseGranted =
                 ContextCompat.checkSelfPermission(
                     context,
-                    Manifest.permission.ACCESS_COARSE_LOCATION
+                    Manifest.permission
+                        .ACCESS_COARSE_LOCATION
                 ) ==
-                        PackageManager.PERMISSION_GRANTED
+                        PackageManager
+                            .PERMISSION_GRANTED
 
             if (
                 fineGranted ||
                 coarseGranted
             ) {
-                val intent = Intent(
-                    context,
-                    LocationTrackingService::class.java
-                )
 
-                ContextCompat.startForegroundService(
-                    context,
-                    intent
-                )
+                val intent =
+                    Intent(
+                        context,
+                        LocationTrackingService::class.java
+                    )
+
+                ContextCompat
+                    .startForegroundService(
+                        context,
+                        intent
+                    )
 
             } else {
 
                 pendingShiftStart = true
 
-                locationPermissionLauncher.launch(
-                    arrayOf(
-                        Manifest.permission.ACCESS_FINE_LOCATION,
-                        Manifest.permission.ACCESS_COARSE_LOCATION
+                locationPermissionLauncher
+                    .launch(
+                        arrayOf(
+                            Manifest.permission
+                                .ACCESS_FINE_LOCATION,
+                            Manifest.permission
+                                .ACCESS_COARSE_LOCATION
+                        )
                     )
-                )
             }
 
         } else if (
             uiState.shiftMessage ==
             "Jornada finalizada"
         ) {
-            /*
-             * Solamente detenemos el GPS cuando
-             * el diligenciero finaliza su jornada.
-             */
-            val intent = Intent(
-                context,
-                LocationTrackingService::class.java
-            )
 
-            context.stopService(intent)
+            /*
+             * El GPS solamente se detiene
+             * cuando el usuario finaliza
+             * explícitamente su jornada.
+             */
+            val intent =
+                Intent(
+                    context,
+                    LocationTrackingService::class.java
+                )
+
+            context.stopService(
+                intent
+            )
         }
     }
 
     /*
-     * Cuando regresamos del detalle de una diligencia,
-     * refrescamos el listado.
+     * Conservamos este comportamiento
+     * aunque actualmente no mostremos
+     * las diligencias.
      */
-    LaunchedEffect(refreshTrigger) {
+    LaunchedEffect(
+        refreshTrigger
+    ) {
         if (refreshTrigger) {
             ticketsViewModel.loadTickets()
             onRefreshHandled()
@@ -198,25 +224,36 @@ fun TicketsListScreen(
 
     Scaffold(
         containerColor =
-            MaterialTheme.colorScheme.background,
+            MaterialTheme
+                .colorScheme
+                .background,
+
         topBar = {
+
             TopAppBar(
                 colors =
-                    TopAppBarDefaults.topAppBarColors(
-                        containerColor =
-                            MaterialTheme.colorScheme.surface
-                    ),
+                    TopAppBarDefaults
+                        .topAppBarColors(
+                            containerColor =
+                                MaterialTheme
+                                    .colorScheme
+                                    .surface
+                        ),
+
                 title = {
+
                     Column {
+
                         Text(
-                            text = "Mis diligencias",
+                            text =
+                                "ProntoTix",
                             fontWeight =
                                 FontWeight.Bold
                         )
 
                         Text(
                             text =
-                                "${uiState.tickets.size} asignaciones",
+                                "Monitoreo de ubicación",
                             style =
                                 MaterialTheme
                                     .typography
@@ -227,122 +264,95 @@ fun TicketsListScreen(
                                     .onSurfaceVariant
                         )
                     }
+                },
+
+                actions = {
+
+                    TextButton(
+                        enabled =
+                            !uiState
+                                .isShiftActive,
+
+                        onClick = {
+
+                            coroutineScope
+                                .launch {
+
+                                    sessionManager
+                                        .clearSession()
+
+                                    onLogout()
+                                }
+                        }
+                    ) {
+
+                        Text(
+                            text =
+                                if (
+                                    uiState
+                                        .isShiftActive
+                                ) {
+                                    "Jornada activa"
+                                } else {
+                                    "Cerrar sesión"
+                                }
+                        )
+                    }
                 }
             )
         }
     ) { paddingValues ->
 
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(
+                        paddingValues
+                    )
         ) {
 
             /*
-             * TARJETA DE JORNADA
+             * CONTROL DE JORNADA
              */
             ShiftCard(
                 isActive =
                     uiState.isShiftActive,
+
                 isLoading =
                     uiState.isShiftLoading,
+
                 message =
                     uiState.shiftMessage,
+
                 onStart = {
-                    ticketsViewModel.startShift()
+                    ticketsViewModel
+                        .startShift()
                 },
+
                 onEnd = {
-                    ticketsViewModel.endShift()
+                    ticketsViewModel
+                        .endShift()
                 }
             )
 
             /*
-             * CONTENIDO DE DILIGENCIAS
+             * INFORMACIÓN DE MONITOREO
+             *
+             * Sustituye visualmente la antigua
+             * lista de diligencias.
              */
-            Box(
-                modifier =
-                    Modifier.weight(1f)
-            ) {
-
-                when {
-
-                    uiState.isLoading -> {
-                        LoadingContent(
-                            modifier =
-                                Modifier.fillMaxSize()
-                        )
-                    }
-
-                    uiState.errorMessage != null -> {
-                        ErrorContent(
-                            message =
-                                uiState
-                                    .errorMessage
-                                    .orEmpty(),
-                            onRetry =
-                                ticketsViewModel::loadTickets,
-                            modifier =
-                                Modifier.fillMaxSize()
-                        )
-                    }
-
-                    uiState.tickets.isEmpty() -> {
-                        EmptyContent(
-                            modifier =
-                                Modifier.fillMaxSize()
-                        )
-                    }
-
-                    else -> {
-
-                        LazyColumn(
-                            modifier =
-                                Modifier.fillMaxSize(),
-                            contentPadding =
-                                PaddingValues(
-                                    horizontal =
-                                        16.dp,
-                                    vertical =
-                                        8.dp
-                                ),
-                            verticalArrangement =
-                                Arrangement.spacedBy(
-                                    14.dp
-                                )
-                        ) {
-
-                            items(
-                                items =
-                                    uiState.tickets,
-                                key = { ticket ->
-                                    ticket.id
-                                        ?: ticket
-                                            .hashCode()
-                                            .toLong()
-                                }
-                            ) { ticket ->
-
-                                DiligenceCard(
-                                    ticket =
-                                        ticket,
-                                    onClick = {
-                                        ticket.id
-                                            ?.let(
-                                                onTicketClick
-                                            )
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
-            }
+            MonitoringInfoCard(
+                isActive =
+                    uiState.isShiftActive
+            )
         }
     }
 }
 
+
 /*
- * Tarjeta que controla la jornada laboral.
+ * TARJETA DE JORNADA
  */
 @Composable
 private fun ShiftCard(
@@ -352,38 +362,56 @@ private fun ShiftCard(
     onStart: () -> Unit,
     onEnd: () -> Unit
 ) {
+
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(
-                horizontal = 16.dp,
-                vertical = 12.dp
-            ),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(
+                    horizontal = 16.dp,
+                    vertical = 12.dp
+                ),
+
         shape =
-            RoundedCornerShape(18.dp),
-        elevation =
-            CardDefaults.cardElevation(
-                defaultElevation = 2.dp
+            RoundedCornerShape(
+                18.dp
             ),
+
+        elevation =
+            CardDefaults
+                .cardElevation(
+                    defaultElevation =
+                        2.dp
+                ),
+
         colors =
-            CardDefaults.cardColors(
-                containerColor =
-                    MaterialTheme
-                        .colorScheme
-                        .surface
-            )
+            CardDefaults
+                .cardColors(
+                    containerColor =
+                        MaterialTheme
+                            .colorScheme
+                            .surface
+                )
     ) {
 
         Column(
             modifier =
-                Modifier.padding(18.dp)
+                Modifier.padding(
+                    18.dp
+                )
         ) {
 
             Row(
                 modifier =
-                    Modifier.fillMaxWidth(),
+                    Modifier
+                        .fillMaxWidth(),
+
                 horizontalArrangement =
-                    Arrangement.SpaceBetween,
+                    androidx.compose.foundation
+                        .layout
+                        .Arrangement
+                        .SpaceBetween,
+
                 verticalAlignment =
                     Alignment.CenterVertically
             ) {
@@ -391,18 +419,23 @@ private fun ShiftCard(
                 Column {
 
                     Text(
-                        text = "Jornada",
+                        text =
+                            "Jornada",
+
                         style =
                             MaterialTheme
                                 .typography
                                 .titleMedium,
+
                         fontWeight =
                             FontWeight.Bold
                     )
 
                     Spacer(
                         modifier =
-                            Modifier.height(4.dp)
+                            Modifier.height(
+                                4.dp
+                            )
                     )
 
                     Text(
@@ -412,6 +445,7 @@ private fun ShiftCard(
                             } else {
                                 "○ Jornada no iniciada"
                             },
+
                         color =
                             if (isActive) {
                                 MaterialTheme
@@ -422,8 +456,10 @@ private fun ShiftCard(
                                     .colorScheme
                                     .onSurfaceVariant
                             },
+
                         fontWeight =
-                            FontWeight.SemiBold
+                            FontWeight
+                                .SemiBold
                     )
                 }
 
@@ -434,6 +470,7 @@ private fun ShiftCard(
                             RoundedCornerShape(
                                 50
                             ),
+
                         color =
                             MaterialTheme
                                 .colorScheme
@@ -441,7 +478,9 @@ private fun ShiftCard(
                     ) {
 
                         Text(
-                            text = "GPS activo",
+                            text =
+                                "GPS activo",
+
                             modifier =
                                 Modifier.padding(
                                     horizontal =
@@ -449,12 +488,15 @@ private fun ShiftCard(
                                     vertical =
                                         6.dp
                                 ),
+
                             style =
                                 MaterialTheme
                                     .typography
                                     .labelMedium,
+
                             fontWeight =
-                                FontWeight.SemiBold
+                                FontWeight
+                                    .SemiBold
                         )
                     }
                 }
@@ -462,7 +504,9 @@ private fun ShiftCard(
 
             Spacer(
                 modifier =
-                    Modifier.height(12.dp)
+                    Modifier.height(
+                        12.dp
+                    )
             )
 
             Text(
@@ -472,10 +516,12 @@ private fun ShiftCard(
                     } else {
                         "Inicia tu jornada para activar el monitoreo de ubicación."
                     },
+
                 style =
                     MaterialTheme
                         .typography
                         .bodyMedium,
+
                 color =
                     MaterialTheme
                         .colorScheme
@@ -490,15 +536,19 @@ private fun ShiftCard(
 
                     Spacer(
                         modifier =
-                            Modifier.height(8.dp)
+                            Modifier.height(
+                                8.dp
+                            )
                     )
 
                     Text(
                         text = it,
+
                         style =
                             MaterialTheme
                                 .typography
                                 .bodySmall,
+
                         color =
                             MaterialTheme
                                 .colorScheme
@@ -508,21 +558,28 @@ private fun ShiftCard(
 
             Spacer(
                 modifier =
-                    Modifier.height(16.dp)
+                    Modifier.height(
+                        16.dp
+                    )
             )
 
             Button(
                 onClick = {
+
                     if (isActive) {
                         onEnd()
                     } else {
                         onStart()
                     }
                 },
+
                 enabled =
                     !isLoading,
+
                 modifier =
-                    Modifier.fillMaxWidth(),
+                    Modifier
+                        .fillMaxWidth(),
+
                 shape =
                     RoundedCornerShape(
                         14.dp
@@ -532,11 +589,14 @@ private fun ShiftCard(
                 if (isLoading) {
 
                     CircularProgressIndicator(
-                        strokeWidth = 2.dp,
+                        strokeWidth =
+                            2.dp,
+
                         modifier =
                             Modifier.height(
                                 22.dp
                             ),
+
                         color =
                             MaterialTheme
                                 .colorScheme
@@ -552,8 +612,10 @@ private fun ShiftCard(
                             } else {
                                 "Iniciar jornada"
                             },
+
                         fontWeight =
-                            FontWeight.SemiBold
+                            FontWeight
+                                .SemiBold
                     )
                 }
             }
@@ -561,32 +623,39 @@ private fun ShiftCard(
     }
 }
 
+
+/*
+ * INFORMACIÓN PARA EL DILIGENCIERO
+ */
 @Composable
-private fun DiligenceCard(
-    ticket: Ticket,
-    onClick: () -> Unit
+private fun MonitoringInfoCard(
+    isActive: Boolean
 ) {
+
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(
-                onClick = onClick
-            ),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(
+                    horizontal =
+                        16.dp,
+                    vertical =
+                        4.dp
+                ),
+
         shape =
             RoundedCornerShape(
                 18.dp
             ),
-        elevation =
-            CardDefaults.cardElevation(
-                defaultElevation = 2.dp
-            ),
+
         colors =
-            CardDefaults.cardColors(
-                containerColor =
-                    MaterialTheme
-                        .colorScheme
-                        .surface
-            )
+            CardDefaults
+                .cardColors(
+                    containerColor =
+                        MaterialTheme
+                            .colorScheme
+                            .surface
+                )
     ) {
 
         Column(
@@ -596,408 +665,48 @@ private fun DiligenceCard(
                 )
         ) {
 
-            Row(
-                modifier =
-                    Modifier.fillMaxWidth(),
-                horizontalArrangement =
-                    Arrangement.SpaceBetween,
-                verticalAlignment =
-                    Alignment.CenterVertically
-            ) {
+            Text(
+                text =
+                    if (isActive) {
+                        "Monitoreo activo"
+                    } else {
+                        "Monitoreo"
+                    },
 
-                Text(
-                    text =
-                        "Diligencia #${ticket.id ?: "-"}",
-                    style =
-                        MaterialTheme
-                            .typography
-                            .labelMedium,
-                    color =
-                        MaterialTheme
-                            .colorScheme
-                            .onSurfaceVariant
-                )
+                style =
+                    MaterialTheme
+                        .typography
+                        .titleMedium,
 
-                StatusBadge(
-                    status =
-                        ticket.status
-                )
-            }
+                fontWeight =
+                    FontWeight.Bold
+            )
 
             Spacer(
                 modifier =
                     Modifier.height(
-                        12.dp
+                        8.dp
                     )
             )
 
             Text(
                 text =
-                    ticket.title
-                        ?: "Diligencia sin título",
+                    if (isActive) {
+                        "Puedes usar tu teléfono normalmente. ProntoTix continuará compartiendo tu ubicación mientras tu jornada permanezca activa."
+                    } else {
+                        "Cuando inicies tu jornada, ProntoTix comenzará a compartir tu ubicación para el seguimiento de tu recorrido."
+                    },
+
                 style =
                     MaterialTheme
                         .typography
-                        .titleLarge,
-                fontWeight =
-                    FontWeight.Bold
-            )
+                        .bodyMedium,
 
-            ticket.clientName
-                ?.takeIf {
-                    it.isNotBlank()
-                }
-                ?.let { client ->
-
-                    Spacer(
-                        modifier =
-                            Modifier.height(
-                                6.dp
-                            )
-                    )
-
-                    Text(
-                        text = client,
-                        style =
-                            MaterialTheme
-                                .typography
-                                .bodyMedium,
-                        color =
-                            MaterialTheme
-                                .colorScheme
-                                .onSurfaceVariant
-                    )
-                }
-
-            Spacer(
-                modifier =
-                    Modifier.height(
-                        16.dp
-                    )
-            )
-
-            Row(
-                modifier =
-                    Modifier.fillMaxWidth(),
-                horizontalArrangement =
-                    Arrangement.SpaceBetween
-            ) {
-
-                Column(
-                    modifier =
-                        Modifier.weight(1f)
-                ) {
-
-                    Text(
-                        text =
-                            "Prioridad",
-                        style =
-                            MaterialTheme
-                                .typography
-                                .labelSmall,
-                        color =
-                            MaterialTheme
-                                .colorScheme
-                                .onSurfaceVariant
-                    )
-
-                    Text(
-                        text =
-                            ticket.priority
-                                ?: "Sin prioridad",
-                        fontWeight =
-                            FontWeight.SemiBold
-                    )
-                }
-
-                ticket.openedAt
-                    ?.takeIf {
-                        it.isNotBlank()
-                    }
-                    ?.let { date ->
-
-                        Column(
-                            modifier =
-                                Modifier.weight(
-                                    1f
-                                ),
-                            horizontalAlignment =
-                                Alignment.End
-                        ) {
-
-                            Text(
-                                text = "Fecha",
-                                style =
-                                    MaterialTheme
-                                        .typography
-                                        .labelSmall,
-                                color =
-                                    MaterialTheme
-                                        .colorScheme
-                                        .onSurfaceVariant
-                            )
-
-                            Text(
-                                text =
-                                    formatTicketDate(
-                                        date
-                                    ),
-                                style =
-                                    MaterialTheme
-                                        .typography
-                                        .bodyMedium
-                            )
-                        }
-                    }
-            }
-        }
-    }
-}
-
-@Composable
-private fun StatusBadge(
-    status: String?
-) {
-    val normalized =
-        status
-            ?.trim()
-            ?.lowercase()
-            .orEmpty()
-
-    val label =
-        when (normalized) {
-
-            "abierta",
-            "abierto" ->
-                "Pendiente"
-
-            "en proceso" ->
-                "En progreso"
-
-            "cerrada",
-            "cerrado",
-            "terminada" ->
-                "Terminada"
-
-            else ->
-                status
-                    ?: "Sin estado"
-        }
-
-    val background =
-        when (normalized) {
-
-            "abierta",
-            "abierto" ->
-                MaterialTheme
-                    .colorScheme
-                    .errorContainer
-
-            "en proceso" ->
-                MaterialTheme
-                    .colorScheme
-                    .tertiaryContainer
-
-            "cerrada",
-            "cerrado",
-            "terminada" ->
-                MaterialTheme
-                    .colorScheme
-                    .secondaryContainer
-
-            else ->
-                MaterialTheme
-                    .colorScheme
-                    .surfaceVariant
-        }
-
-    Surface(
-        shape =
-            RoundedCornerShape(
-                50
-            ),
-        color = background
-    ) {
-
-        Text(
-            text = label,
-            modifier =
-                Modifier.padding(
-                    horizontal =
-                        10.dp,
-                    vertical =
-                        6.dp
-                ),
-            style =
-                MaterialTheme
-                    .typography
-                    .labelMedium,
-            fontWeight =
-                FontWeight.SemiBold
-        )
-    }
-}
-
-@Composable
-private fun LoadingContent(
-    modifier: Modifier =
-        Modifier
-) {
-    Box(
-        modifier =
-            modifier,
-        contentAlignment =
-            Alignment.Center
-    ) {
-        CircularProgressIndicator()
-    }
-}
-
-@Composable
-private fun ErrorContent(
-    message: String,
-    onRetry: () -> Unit,
-    modifier: Modifier =
-        Modifier
-) {
-    Column(
-        modifier =
-            modifier.padding(
-                24.dp
-            ),
-        verticalArrangement =
-            Arrangement.Center,
-        horizontalAlignment =
-            Alignment.CenterHorizontally
-    ) {
-
-        Text(
-            text =
-                "No pudimos cargar tus diligencias",
-            style =
-                MaterialTheme
-                    .typography
-                    .titleMedium,
-            fontWeight =
-                FontWeight.Bold
-        )
-
-        Spacer(
-            modifier =
-                Modifier.height(
-                    8.dp
-                )
-        )
-
-        Text(
-            text = message,
-            color =
-                MaterialTheme
-                    .colorScheme
-                    .error
-        )
-
-        Spacer(
-            modifier =
-                Modifier.height(
-                    16.dp
-                )
-        )
-
-        Button(
-            onClick =
-                onRetry
-        ) {
-            Text(
-                "Reintentar"
+                color =
+                    MaterialTheme
+                        .colorScheme
+                        .onSurfaceVariant
             )
         }
-    }
-}
-
-@Composable
-private fun EmptyContent(
-    modifier: Modifier =
-        Modifier
-) {
-    Column(
-        modifier =
-            modifier.padding(
-                24.dp
-            ),
-        verticalArrangement =
-            Arrangement.Center,
-        horizontalAlignment =
-            Alignment.CenterHorizontally
-    ) {
-
-        Text(
-            text =
-                "No tienes diligencias asignadas",
-            style =
-                MaterialTheme
-                    .typography
-                    .titleMedium,
-            fontWeight =
-                FontWeight.Bold
-        )
-
-        Spacer(
-            modifier =
-                Modifier.height(
-                    8.dp
-                )
-        )
-
-        Text(
-            text =
-                "Cuando Compras te asigne una diligencia aparecerá aquí.",
-            style =
-                MaterialTheme
-                    .typography
-                    .bodyMedium,
-            color =
-                MaterialTheme
-                    .colorScheme
-                    .onSurfaceVariant
-        )
-    }
-}
-
-private fun formatTicketDate(
-    date: String
-): String {
-
-    return try {
-
-        val instant =
-            java.time.Instant
-                .parse(date)
-
-        val formatter =
-            java.time.format
-                .DateTimeFormatter
-                .ofPattern(
-                    "dd MMM yyyy"
-                )
-                .withLocale(
-                    java.util.Locale(
-                        "es",
-                        "MX"
-                    )
-                )
-                .withZone(
-                    java.time.ZoneId
-                        .systemDefault()
-                )
-
-        formatter.format(
-            instant
-        )
-
-    } catch (
-        _: Exception
-    ) {
-        date
     }
 }
