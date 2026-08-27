@@ -17,6 +17,7 @@ import retrofit2.http.POST
 import com.luisvicente.prontotix.data.model.DriverLocationRequest
 import com.luisvicente.prontotix.data.model.DriverShift
 import com.luisvicente.prontotix.data.model.ActiveDriverShiftResponse
+import com.luisvicente.prontotix.data.model.DriverTrackingEventRequest
 
 interface TicketsApiService {
 
@@ -80,4 +81,10 @@ interface TicketsApiService {
     suspend fun endDriverShift(
         @Header("Authorization") authorization: String
     ): Response<DriverShift>
+
+    @POST("api/driver-tracking/events")
+    suspend fun sendDriverTrackingEvent(
+        @Header("Authorization") authorization: String,
+        @Body request: DriverTrackingEventRequest
+    ): Response<Unit>
 }
