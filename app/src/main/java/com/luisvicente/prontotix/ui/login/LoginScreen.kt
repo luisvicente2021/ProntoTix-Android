@@ -17,6 +17,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -24,6 +25,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,11 +38,16 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.credentials.CreatePasswordRequest
 import androidx.credentials.CredentialManager
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.GetPasswordOption
+import androidx.credentials.PasswordCredential
 import androidx.credentials.exceptions.CreateCredentialException
+import androidx.credentials.exceptions.GetCredentialException
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.luisvicente.prontotix.R
 import com.luisvicente.prontotix.data.local.SessionManager
+import kotlinx.coroutines.launch
 
 @Composable
 fun LoginScreen(
@@ -49,14 +56,9 @@ fun LoginScreen(
     val context =
         LocalContext.current
 
-    /*
-     * Administrador de credenciales de Android.
-     *
-     * ProntoTix NO almacena aquí la contraseña.
-     * La contraseña puede guardarse mediante
-     * Google Password Manager u otro proveedor
-     * configurado en el teléfono.
-     */
+    val coroutineScope =
+        rememberCoroutineScope()
+
     val credentialManager =
         remember {
             CredentialManager.create(
@@ -83,23 +85,36 @@ fun LoginScreen(
         mutableStateOf("")
     }
 
+    var credentialMessage by remember {
+        mutableStateOf<String?>(null)
+    }
+
+    /*
+     * Indica que usuario + contraseña
+     * fueron recuperados desde
+     * Credential Manager.
+     *
+     * Si es true NO volvemos a pedir
+     * guardar la misma contraseña.
+     */
+    var credentialWasLoaded by remember {
+        mutableStateOf(false)
+    }
+
     val uiState by
     loginViewModel
         .uiState
         .collectAsStateWithLifecycle()
 
     /*
-     * Cuando Supabase confirma que
-     * las credenciales son correctas:
+     * LOGIN EXITOSO
      *
-     * 1. Solicitamos a Android guardar
-     *    correo + contraseña.
+     * Solo solicitamos guardar la contraseña
+     * cuando fue escrita manualmente.
      *
-     * 2. Si el usuario cancela o el teléfono
-     *    no tiene un proveedor disponible,
-     *    NO bloqueamos el inicio de sesión.
-     *
-     * 3. Entramos normalmente a ProntoTix.
+     * Si vino de Google Password Manager,
+     * ya está guardada y no preguntamos
+     * nuevamente.
      */
     LaunchedEffect(
         uiState.isSuccess
@@ -107,8 +122,8 @@ fun LoginScreen(
         if (
             uiState.isSuccess
         ) {
-
             if (
+                !credentialWasLoaded &&
                 email.isNotBlank() &&
                 password.isNotBlank()
             ) {
@@ -134,12 +149,8 @@ fun LoginScreen(
                     CreateCredentialException
                 ) {
                     /*
-                     * El usuario puede seleccionar
-                     * "Ahora no", cancelar el aviso
-                     * o no tener un administrador
-                     * de contraseñas configurado.
-                     *
-                     * El login continúa normalmente.
+                     * Si cancela el guardado
+                     * seguimos entrando normalmente.
                      */
                 }
             }
@@ -160,7 +171,6 @@ fun LoginScreen(
         contentAlignment =
             Alignment.Center
     ) {
-
         Column(
             modifier =
                 Modifier
@@ -170,9 +180,6 @@ fun LoginScreen(
                 Alignment.CenterHorizontally
         ) {
 
-            /*
-             * LOGO
-             */
             Image(
                 painter =
                     painterResource(
@@ -196,7 +203,8 @@ fun LoginScreen(
             )
 
             Text(
-                text = "ProntoTix",
+                text =
+                    "ProntoTix",
                 style =
                     MaterialTheme
                         .typography
@@ -236,33 +244,26 @@ fun LoginScreen(
                     )
             )
 
-            /*
-             * TARJETA DE LOGIN
-             */
             Card(
                 modifier =
-                    Modifier
-                        .fillMaxWidth(),
+                    Modifier.fillMaxWidth(),
                 shape =
                     RoundedCornerShape(
                         24.dp
                     ),
                 colors =
-                    CardDefaults
-                        .cardColors(
-                            containerColor =
-                                MaterialTheme
-                                    .colorScheme
-                                    .surface
-                        ),
+                    CardDefaults.cardColors(
+                        containerColor =
+                            MaterialTheme
+                                .colorScheme
+                                .surface
+                    ),
                 elevation =
-                    CardDefaults
-                        .cardElevation(
-                            defaultElevation =
-                                4.dp
-                        )
+                    CardDefaults.cardElevation(
+                        defaultElevation =
+                            4.dp
+                    )
             ) {
-
                 Column(
                     modifier =
                         Modifier.padding(
@@ -314,45 +315,43 @@ fun LoginScreen(
                     OutlinedTextField(
                         value =
                             email,
-
                         onValueChange = {
                             email = it
-                        },
 
+                            /*
+                             * Si modifica manualmente
+                             * el usuario, ya no consideramos
+                             * que sea exactamente la
+                             * credencial recuperada.
+                             */
+                            credentialWasLoaded =
+                                false
+                        },
                         label = {
                             Text(
                                 "Correo electrónico"
                             )
                         },
-
                         placeholder = {
                             Text(
                                 "usuario@prontotix.com"
                             )
                         },
-
                         enabled =
-                            !uiState
-                                .isLoading,
-
+                            !uiState.isLoading,
                         singleLine =
                             true,
-
                         keyboardOptions =
                             KeyboardOptions(
                                 keyboardType =
-                                    KeyboardType
-                                        .Email
+                                    KeyboardType.Email
                             ),
-
                         shape =
                             RoundedCornerShape(
                                 14.dp
                             ),
-
                         modifier =
-                            Modifier
-                                .fillMaxWidth()
+                            Modifier.fillMaxWidth()
                     )
 
                     Spacer(
@@ -368,46 +367,168 @@ fun LoginScreen(
                     OutlinedTextField(
                         value =
                             password,
-
                         onValueChange = {
                             password = it
-                        },
 
+                            /*
+                             * Si modifica manualmente
+                             * la contraseña, permitimos
+                             * que Android pregunte si
+                             * quiere actualizar/guardar.
+                             */
+                            credentialWasLoaded =
+                                false
+                        },
                         label = {
                             Text(
                                 "Contraseña"
                             )
                         },
-
                         enabled =
-                            !uiState
-                                .isLoading,
-
+                            !uiState.isLoading,
                         singleLine =
                             true,
-
                         visualTransformation =
                             PasswordVisualTransformation(),
-
                         keyboardOptions =
                             KeyboardOptions(
                                 keyboardType =
-                                    KeyboardType
-                                        .Password
+                                    KeyboardType.Password
                             ),
-
                         shape =
                             RoundedCornerShape(
                                 14.dp
                             ),
-
                         modifier =
-                            Modifier
-                                .fillMaxWidth()
+                            Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(
+                        modifier =
+                            Modifier.height(
+                                12.dp
+                            )
                     )
 
                     /*
-                     * ERROR DE LOGIN
+                     * USAR CONTRASEÑA GUARDADA
+                     */
+                    OutlinedButton(
+                        onClick = {
+                            credentialMessage =
+                                null
+
+                            coroutineScope.launch {
+                                try {
+                                    val getPasswordOption =
+                                        GetPasswordOption()
+
+                                    val request =
+                                        GetCredentialRequest(
+                                            listOf(
+                                                getPasswordOption
+                                            )
+                                        )
+
+                                    val result =
+                                        credentialManager
+                                            .getCredential(
+                                                context =
+                                                    context,
+                                                request =
+                                                    request
+                                            )
+
+                                    val credential =
+                                        result.credential
+
+                                    if (
+                                        credential
+                                                is PasswordCredential
+                                    ) {
+                                        email =
+                                            credential.id
+
+                                        password =
+                                            credential.password
+
+                                        /*
+                                         * MUY IMPORTANTE:
+                                         * esta contraseña ya
+                                         * estaba guardada.
+                                         */
+                                        credentialWasLoaded =
+                                            true
+
+                                        credentialMessage =
+                                            "Credencial cargada correctamente."
+                                    } else {
+                                        credentialWasLoaded =
+                                            false
+
+                                        credentialMessage =
+                                            "No se recibió una contraseña guardada."
+                                    }
+
+                                } catch (
+                                    error:
+                                    GetCredentialException
+                                ) {
+                                    credentialWasLoaded =
+                                        false
+
+                                    credentialMessage =
+                                        "No se encontró una contraseña guardada."
+                                }
+                            }
+                        },
+                        enabled =
+                            !uiState.isLoading,
+                        shape =
+                            RoundedCornerShape(
+                                14.dp
+                            ),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .height(
+                                    48.dp
+                                )
+                    ) {
+                        Text(
+                            text =
+                                "🔑 Usar contraseña guardada",
+                            fontWeight =
+                                FontWeight.Medium
+                        )
+                    }
+
+                    credentialMessage
+                        ?.let { message ->
+
+                            Spacer(
+                                modifier =
+                                    Modifier.height(
+                                        10.dp
+                                    )
+                            )
+
+                            Text(
+                                text =
+                                    message,
+                                style =
+                                    MaterialTheme
+                                        .typography
+                                        .bodySmall,
+                                color =
+                                    MaterialTheme
+                                        .colorScheme
+                                        .onSurfaceVariant
+                            )
+                        }
+
+                    /*
+                     * ERROR LOGIN
                      */
                     uiState
                         .errorMessage
@@ -422,33 +543,26 @@ fun LoginScreen(
 
                             Card(
                                 colors =
-                                    CardDefaults
-                                        .cardColors(
-                                            containerColor =
-                                                MaterialTheme
-                                                    .colorScheme
-                                                    .errorContainer
-                                        ),
+                                    CardDefaults.cardColors(
+                                        containerColor =
+                                            MaterialTheme
+                                                .colorScheme
+                                                .errorContainer
+                                    ),
                                 modifier =
-                                    Modifier
-                                        .fillMaxWidth()
+                                    Modifier.fillMaxWidth()
                             ) {
-
                                 Text(
                                     text =
                                         message,
-
                                     color =
                                         MaterialTheme
                                             .colorScheme
                                             .onErrorContainer,
-
                                     modifier =
-                                        Modifier
-                                            .padding(
-                                                12.dp
-                                            ),
-
+                                        Modifier.padding(
+                                            12.dp
+                                        ),
                                     style =
                                         MaterialTheme
                                             .typography
@@ -469,28 +583,24 @@ fun LoginScreen(
                      */
                     Button(
                         onClick = {
-                            loginViewModel
-                                .login(
-                                    email =
-                                        email.trim(),
-                                    password =
-                                        password
-                                )
-                        },
+                            credentialMessage =
+                                null
 
-                        enabled =
-                            !uiState
-                                .isLoading &&
-                                    email
-                                        .isNotBlank() &&
+                            loginViewModel.login(
+                                email =
+                                    email.trim(),
+                                password =
                                     password
-                                        .isNotBlank(),
-
+                            )
+                        },
+                        enabled =
+                            !uiState.isLoading &&
+                                    email.isNotBlank() &&
+                                    password.isNotBlank(),
                         shape =
                             RoundedCornerShape(
                                 14.dp
                             ),
-
                         modifier =
                             Modifier
                                 .fillMaxWidth()
@@ -498,18 +608,14 @@ fun LoginScreen(
                                     52.dp
                                 )
                     ) {
-
                         if (
-                            uiState
-                                .isLoading
+                            uiState.isLoading
                         ) {
-
                             CircularProgressIndicator(
                                 modifier =
-                                    Modifier
-                                        .height(
-                                            24.dp
-                                        ),
+                                    Modifier.height(
+                                        24.dp
+                                    ),
                                 strokeWidth =
                                     2.dp,
                                 color =
@@ -517,15 +623,12 @@ fun LoginScreen(
                                         .colorScheme
                                         .onPrimary
                             )
-
                         } else {
-
                             Text(
                                 text =
                                     "Iniciar sesión",
                                 fontWeight =
-                                    FontWeight
-                                        .SemiBold
+                                    FontWeight.SemiBold
                             )
                         }
                     }
