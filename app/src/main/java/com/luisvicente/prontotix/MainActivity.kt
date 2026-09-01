@@ -29,7 +29,6 @@ class MainActivity : ComponentActivity() {
         if (isOwner) {
             DevicePolicyManagerHelper.enforceLocation(this)
             DevicePolicyManagerHelper.lockLocationPermission(this)
-            DevicePolicyManagerHelper.blockAppUninstall(this)
         }
 
         enableEdgeToEdge()
