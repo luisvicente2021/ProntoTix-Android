@@ -27,6 +27,7 @@ import com.luisvicente.prontotix.ui.login.LoginScreen
 import com.luisvicente.prontotix.ui.ticketdetail.TicketDetailScreen
 import com.luisvicente.prontotix.ui.tickets.TicketsListScreen
 import kotlinx.coroutines.flow.first
+import com.luisvicente.prontotix.scheduler.ShiftScheduler
 
 private sealed interface StartupState {
 
@@ -44,6 +45,13 @@ fun AppNavigation(
 ) {
     val context =
         LocalContext.current
+
+    LaunchedEffect(Unit) {
+
+        ShiftScheduler.scheduleDailyShift(
+            context.applicationContext
+        )
+    }
 
     val sessionManager =
         remember {

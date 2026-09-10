@@ -24,6 +24,8 @@
     <uses-permission
         android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
 
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -78,6 +80,11 @@
             </intent-filter>
 
         </receiver>
+
+        <receiver
+            android:name=".scheduler.ShiftAlarmReceiver"
+            android:enabled="true"
+            android:exported="false" />
 
     </application>
 
