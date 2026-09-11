@@ -28,6 +28,7 @@ import com.luisvicente.prontotix.ui.ticketdetail.TicketDetailScreen
 import com.luisvicente.prontotix.ui.tickets.TicketsListScreen
 import kotlinx.coroutines.flow.first
 import com.luisvicente.prontotix.scheduler.ShiftScheduler
+import com.luisvicente.prontotix.ui.driverhome.DriverHomeScreen
 
 private sealed interface StartupState {
 
@@ -192,11 +193,12 @@ fun AppNavigation(
         when (startupState) {
 
             StartupState.LoggedIn ->
-                AppRoute.TICKETS
+                AppRoute.DRIVER_HOME
 
             else ->
                 AppRoute.LOGIN
         }
+
 
     NavHost(
         navController =
@@ -211,7 +213,7 @@ fun AppNavigation(
             LoginScreen(
                 onLoginSuccess = {
                     navController.navigate(
-                        AppRoute.TICKETS
+                        AppRoute.DRIVER_HOME
                     ) {
                         popUpTo(
                             AppRoute.LOGIN
@@ -219,6 +221,19 @@ fun AppNavigation(
                             inclusive = true
                         }
                     }
+                }
+            )
+        }
+
+        composable(
+            AppRoute.DRIVER_HOME
+        ) {
+            DriverHomeScreen(
+                adminPassword = "1234",
+                onAdminClick = {
+                    navController.navigate(
+                        AppRoute.TICKETS
+                    )
                 }
             )
         }

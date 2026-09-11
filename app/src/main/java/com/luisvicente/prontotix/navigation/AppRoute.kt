@@ -2,6 +2,7 @@ package com.luisvicente.prontotix.navigation
 
 object AppRoute {
     const val LOGIN = "login"
+    const val DRIVER_HOME = "driver_home"
     const val TICKETS = "tickets"
     const val TICKET_DETAIL = "ticket_detail/{ticketId}"
     const val LOCATION_TEST = "location_test"

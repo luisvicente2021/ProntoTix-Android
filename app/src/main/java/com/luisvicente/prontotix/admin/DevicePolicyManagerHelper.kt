@@ -115,12 +115,24 @@ object DevicePolicyManagerHelper {
                     DevicePolicyManager.PERMISSION_GRANT_STATE_GRANTED
                 )
 
+            val backgroundGranted =
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    dpm.setPermissionGrantState(
+                        admin,
+                        context.packageName,
+                        Manifest.permission.ACCESS_BACKGROUND_LOCATION,
+                        DevicePolicyManager.PERMISSION_GRANT_STATE_GRANTED
+                    )
+                } else {
+                    true
+                }
+
             Log.d(
                 TAG,
-                "Permiso GPS BLOQUEADO - FINE=$fineGranted COARSE=$coarseGranted"
+                "Permisos GPS BLOQUEADOS - FINE=$fineGranted COARSE=$coarseGranted BACKGROUND=$backgroundGranted"
             )
 
-            fineGranted && coarseGranted
+            fineGranted && coarseGranted && backgroundGranted
 
         } catch (e: Exception) {
 
@@ -218,6 +230,71 @@ object DevicePolicyManagerHelper {
             Log.e(
                 TAG,
                 "Error bloqueando desinstalación de ProntoTix",
+                e
+            )
+
+            false
+        }
+    }
+
+    fun enforceWorkDeviceRestrictions(
+        context: Context
+    ): Boolean {
+
+        val dpm =
+            context.getSystemService(
+                Context.DEVICE_POLICY_SERVICE
+            ) as DevicePolicyManager
+
+        if (!dpm.isDeviceOwnerApp(context.packageName)) {
+            Log.e(
+                TAG,
+                "No se pueden aplicar restricciones: NO es Device Owner"
+            )
+            return false
+        }
+
+        val admin =
+            ComponentName(
+                context,
+                ProntoDeviceAdminReceiver::class.java
+            )
+
+        return try {
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+
+                // No permitir activar modo avión
+                dpm.addUserRestriction(
+                    admin,
+                    UserManager.DISALLOW_AIRPLANE_MODE
+                )
+
+                // No permitir apagar/modificar ubicación
+                dpm.addUserRestriction(
+                    admin,
+                    UserManager.DISALLOW_CONFIG_LOCATION
+                )
+
+                // Evitar cambios manuales de fecha/hora
+                dpm.addUserRestriction(
+                    admin,
+                    UserManager.DISALLOW_CONFIG_DATE_TIME
+                )
+            }
+
+            Log.d(
+                TAG,
+                "Restricciones de dispositivo aplicadas"
+            )
+
+            true
+
+        } catch (e: Exception) {
+
+            Log.e(
+                TAG,
+                "Error aplicando restricciones del dispositivo",
                 e
             )
 
