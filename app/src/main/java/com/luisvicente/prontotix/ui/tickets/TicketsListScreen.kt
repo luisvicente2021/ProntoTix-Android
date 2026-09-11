@@ -43,6 +43,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.luisvicente.prontotix.data.local.SessionManager
 import com.luisvicente.prontotix.service.LocationTrackingService
 import kotlinx.coroutines.launch
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -81,6 +84,37 @@ fun TicketsListScreen(
         mutableStateOf(false)
     }
 
+    val backgroundLocationSettingsLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.StartActivityForResult()
+        ) {
+            val backgroundGranted =
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.ACCESS_BACKGROUND_LOCATION
+                    ) == PackageManager.PERMISSION_GRANTED
+                } else {
+                    true
+                }
+
+            if (pendingShiftStart && backgroundGranted) {
+
+                val intent =
+                    Intent(
+                        context,
+                        LocationTrackingService::class.java
+                    )
+
+                ContextCompat.startForegroundService(
+                    context,
+                    intent
+                )
+
+                pendingShiftStart = false
+            }
+        }
+
     /*
      * Si todavía no existen permisos de ubicación,
      * los solicitamos cuando inicia la jornada.
@@ -108,20 +142,45 @@ fun TicketsListScreen(
                 pendingShiftStart &&
                 (fineGranted || coarseGranted)
             ) {
-                val intent =
-                    Intent(
-                        context,
-                        LocationTrackingService::class.java
-                    )
 
-                ContextCompat
-                    .startForegroundService(
+                val backgroundGranted =
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        ContextCompat.checkSelfPermission(
+                            context,
+                            Manifest.permission.ACCESS_BACKGROUND_LOCATION
+                        ) == PackageManager.PERMISSION_GRANTED
+                    } else {
+                        true
+                    }
+
+                if (backgroundGranted) {
+
+                    val intent =
+                        Intent(
+                            context,
+                            LocationTrackingService::class.java
+                        )
+
+                    ContextCompat.startForegroundService(
                         context,
                         intent
                     )
-            }
 
-            pendingShiftStart = false
+                    pendingShiftStart = false
+
+                } else {
+
+                    val settingsIntent =
+                        Intent(
+                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            Uri.parse("package:${context.packageName}")
+                        )
+
+                    backgroundLocationSettingsLauncher.launch(
+                        settingsIntent
+                    )
+                }
+            }
         }
 
     /*
@@ -154,9 +213,22 @@ fun TicketsListScreen(
                         PackageManager
                             .PERMISSION_GRANTED
 
+            val foregroundGranted =
+                fineGranted || coarseGranted
+
+            val backgroundGranted =
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.ACCESS_BACKGROUND_LOCATION
+                    ) == PackageManager.PERMISSION_GRANTED
+                } else {
+                    true
+                }
+
             if (
-                fineGranted ||
-                coarseGranted
+                foregroundGranted &&
+                backgroundGranted
             ) {
 
                 val intent =
@@ -165,13 +237,17 @@ fun TicketsListScreen(
                         LocationTrackingService::class.java
                     )
 
-                ContextCompat
-                    .startForegroundService(
-                        context,
-                        intent
-                    )
+                ContextCompat.startForegroundService(
+                    context,
+                    intent
+                )
 
-            } else {
+            } else if (
+                foregroundGranted &&
+                !backgroundGranted
+            ) {
+
+
 
                 pendingShiftStart = true
 
