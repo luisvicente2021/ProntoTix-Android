@@ -47,6 +47,11 @@ class BootReceiver : BroadcastReceiver() {
                     now.get(Calendar.HOUR_OF_DAY) * 60 +
                     now.get(Calendar.MINUTE)
 
+                Log.i(
+                    TAG,
+                    "Hora detectada después del reinicio: $minutes minutos"
+                )
+
                 val shiftStart = 9 * 60
                 val shiftEnd = 18 * 60 + 30
 
@@ -61,6 +66,11 @@ class BootReceiver : BroadcastReceiver() {
                         .startAutomaticShift(
                             context.applicationContext
                         )
+
+                    Log.i(
+                        TAG,
+                        "Recuperación automática terminada"
+                    )
 
                 } else {
 
