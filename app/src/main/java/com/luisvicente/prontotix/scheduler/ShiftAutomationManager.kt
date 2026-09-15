@@ -10,6 +10,7 @@ import com.luisvicente.prontotix.data.repository.AuthRepository
 import com.luisvicente.prontotix.data.repository.DriverShiftRepository
 import com.luisvicente.prontotix.service.LocationTrackingService
 import kotlinx.coroutines.flow.first
+import com.luisvicente.prontotix.admin.MaintenanceModeManager
 
 object ShiftAutomationManager {
 
@@ -298,9 +299,14 @@ object ShiftAutomationManager {
          * - evitamos que se desactive
          * - concedemos los permisos
          */
+        val maintenanceMode =
+            MaintenanceModeManager
+                .isEnabled(context)
+
         if (
             DevicePolicyManagerHelper
-                .isDeviceOwner(context)
+                .isDeviceOwner(context) &&
+            !maintenanceMode
         ) {
 
             DevicePolicyManagerHelper

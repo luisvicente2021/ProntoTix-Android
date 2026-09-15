@@ -9,6 +9,8 @@ import com.luisvicente.prontotix.admin.DevicePolicyManagerHelper
 import com.luisvicente.prontotix.navigation.AppNavigation
 import com.luisvicente.prontotix.ui.theme.ProntoTixTheme
 import com.luisvicente.prontotix.data.remote.BackendRetrofitClient
+import com.luisvicente.prontotix.admin.MaintenanceModeManager
+
 
 class MainActivity : ComponentActivity() {
 
@@ -26,11 +28,30 @@ class MainActivity : ComponentActivity() {
             "¿ProntoTix es Device Owner? $isOwner"
         )
 
-        if (isOwner) {
-            DevicePolicyManagerHelper.enforceLocation(this)
-            DevicePolicyManagerHelper.lockLocationPermission(this)
-            DevicePolicyManagerHelper.enforceWorkDeviceRestrictions(this)
-            DevicePolicyManagerHelper.blockAppUninstall(this)
+        val maintenanceMode =
+            MaintenanceModeManager.isEnabled(this)
+
+        Log.d(
+            "ProntoDevicePolicy",
+            "Modo mantenimiento: $maintenanceMode"
+        )
+
+        if (
+            isOwner &&
+            !maintenanceMode
+        ) {
+
+            DevicePolicyManagerHelper
+                .enforceLocation(this)
+
+            DevicePolicyManagerHelper
+                .lockLocationPermission(this)
+
+            DevicePolicyManagerHelper
+                .enforceWorkDeviceRestrictions(this)
+
+            DevicePolicyManagerHelper
+                .blockAppUninstall(this)
         }
 
         enableEdgeToEdge()

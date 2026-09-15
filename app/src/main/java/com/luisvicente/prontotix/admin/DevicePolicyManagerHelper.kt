@@ -308,4 +308,136 @@ object DevicePolicyManagerHelper {
             false
         }
     }
-}
+        fun enableMaintenanceMode(
+            context: Context
+        ): Boolean {
+
+            val dpm =
+                context.getSystemService(
+                    Context.DEVICE_POLICY_SERVICE
+                ) as DevicePolicyManager
+
+            if (!dpm.isDeviceOwnerApp(context.packageName)) {
+
+                Log.e(
+                    TAG,
+                    "No se puede activar mantenimiento: NO es Device Owner"
+                )
+
+                return false
+            }
+
+            val admin =
+                ComponentName(
+                    context,
+                    ProntoDeviceAdminReceiver::class.java
+                )
+
+            return try {
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+
+                    dpm.clearUserRestriction(
+                        admin,
+                        UserManager.DISALLOW_AIRPLANE_MODE
+                    )
+
+                    dpm.clearUserRestriction(
+                        admin,
+                        UserManager.DISALLOW_CONFIG_MOBILE_NETWORKS
+                    )
+
+                    dpm.clearUserRestriction(
+                        admin,
+                        UserManager.DISALLOW_CONFIG_LOCATION
+                    )
+
+                    dpm.clearUserRestriction(
+                        admin,
+                        UserManager.DISALLOW_CONFIG_DATE_TIME
+                    )
+                }
+
+                dpm.setUninstallBlocked(
+                    admin,
+                    context.packageName,
+                    false
+                )
+
+                Log.i(
+                    TAG,
+                    "MODO MANTENIMIENTO ACTIVADO"
+                )
+
+                true
+
+            } catch (e: Exception) {
+
+                Log.e(
+                    TAG,
+                    "Error activando modo mantenimiento",
+                    e
+                )
+
+                false
+            }
+        }
+
+        fun disableMaintenanceMode(
+            context: Context
+        ): Boolean {
+
+            if (!isDeviceOwner(context)) {
+
+                Log.e(
+                    TAG,
+                    "No se puede desactivar mantenimiento: NO es Device Owner"
+                )
+
+                return false
+            }
+
+            val restrictionsApplied =
+                enforceWorkDeviceRestrictions(
+                    context
+                )
+
+            val locationApplied =
+                enforceLocation(
+                    context
+                )
+
+            val permissionsApplied =
+                lockLocationPermission(
+                    context
+                )
+
+            val uninstallBlocked =
+                blockAppUninstall(
+                    context
+                )
+
+            val success =
+                restrictionsApplied &&
+                        locationApplied &&
+                        permissionsApplied &&
+                        uninstallBlocked
+
+            if (success) {
+
+                Log.i(
+                    TAG,
+                    "MODO MANTENIMIENTO DESACTIVADO - restricciones restauradas"
+                )
+
+            } else {
+
+                Log.e(
+                    TAG,
+                    "No se pudieron restaurar todas las restricciones"
+                )
+            }
+
+            return success
+        }
+    }

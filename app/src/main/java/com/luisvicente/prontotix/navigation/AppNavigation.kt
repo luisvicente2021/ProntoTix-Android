@@ -30,6 +30,7 @@ import kotlinx.coroutines.flow.first
 import com.luisvicente.prontotix.scheduler.ShiftScheduler
 import com.luisvicente.prontotix.ui.driverhome.DriverHomeScreen
 import com.luisvicente.prontotix.BuildConfig
+import com.luisvicente.prontotix.ui.admin.AdminScreen
 
 private sealed interface StartupState {
 
@@ -233,8 +234,20 @@ fun AppNavigation(
                 adminPassword = BuildConfig.ADMIN_PASSWORD,
                 onAdminClick = {
                     navController.navigate(
-                        AppRoute.TICKETS
+                        AppRoute.ADMIN
                     )
+                }
+            )
+        }
+
+        composable(
+            AppRoute.ADMIN
+        ) {
+
+            AdminScreen(
+                onBack = {
+                    navController
+                        .popBackStack()
                 }
             )
         }
