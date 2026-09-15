@@ -4,19 +4,26 @@ import android.content.Context
 import android.location.LocationManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -31,15 +38,27 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.luisvicente.prontotix.R
 import kotlinx.coroutines.delay
 import java.time.Duration
 import java.time.LocalTime
-import java.time.format.DateTimeFormatter
+
+private val ProntoNavy = Color(0xFF0B1930)
+private val ProntoBlue = Color(0xFF1677FF)
+private val ProntoGreen = Color(0xFF10B981)
+private val ProntoBackground = Color(0xFFF4F7FB)
+private val ProntoText = Color(0xFF12233D)
+private val ProntoMuted = Color(0xFF64748B)
+private val ProntoDanger = Color(0xFFE05252)
 
 @Composable
 fun DriverHomeScreen(
@@ -47,8 +66,7 @@ fun DriverHomeScreen(
     onAdminClick: () -> Unit = {}
 ) {
 
-    val context =
-        LocalContext.current
+    val context = LocalContext.current
 
     var locationEnabled by remember {
         mutableStateOf(
@@ -115,300 +133,472 @@ fun DriverHomeScreen(
     }
 
     val shiftStart =
-        LocalTime.of(
-            9,
-            0
-        )
+        LocalTime.of(9, 0)
 
     val shiftEnd =
-        LocalTime.of(
-            18,
-            30
-        )
+        LocalTime.of(18, 30)
 
-    val shiftActive =
-        currentTime >= shiftStart &&
-                currentTime < shiftEnd
-
-    val timeFormatter =
-        DateTimeFormatter.ofPattern(
-            "HH:mm"
-        )
-
-    Scaffold { paddingValues ->
+    Scaffold(
+        containerColor = ProntoBackground
+    ) { paddingValues ->
 
         Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(
-                        horizontal = 24.dp,
-                        vertical = 28.dp
-                    ),
-            horizontalAlignment =
-                Alignment.CenterHorizontally
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
         ) {
 
-            Text(
-                text = "ProntoTix",
-                style =
-                    MaterialTheme
-                        .typography
-                        .headlineLarge,
-                fontWeight =
-                    FontWeight.Bold
-            )
-
-            Text(
-                text =
-                    "Seguimiento de jornada",
-                style =
-                    MaterialTheme
-                        .typography
-                        .bodyLarge
-            )
-
-            Spacer(
-                modifier =
-                    Modifier.height(28.dp)
-            )
-
-            Card(
-                modifier =
-                    Modifier.fillMaxWidth(),
-                elevation =
-                    CardDefaults.cardElevation(
-                        defaultElevation = 4.dp
-                    )
+            /*
+             * HEADER
+             */
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(ProntoNavy)
+                    .padding(
+                        horizontal = 16.dp,
+                        vertical = 11.dp
+                    ),
+                verticalAlignment =
+                    Alignment.CenterVertically
             ) {
 
-                Column(
+                Image(
+                    painter =
+                        painterResource(
+                            R.drawable.prontotix_logo
+                        ),
+                    contentDescription =
+                        "Logo ProntoTix",
                     modifier =
-                        Modifier.padding(24.dp),
-                    horizontalAlignment =
-                        Alignment.CenterHorizontally
+                        Modifier.size(40.dp),
+                    contentScale =
+                        ContentScale.Fit
+                )
+
+                Spacer(
+                    modifier =
+                        Modifier.width(9.dp)
+                )
+
+                Text(
+                    text = "Pronto",
+                    color = Color.White,
+                    fontWeight =
+                        FontWeight.Bold,
+                    style =
+                        MaterialTheme.typography.titleLarge
+                )
+
+                Text(
+                    text = "Tix",
+                    color =
+                        Color(0xFF12C9DC),
+                    fontWeight =
+                        FontWeight.Bold,
+                    style =
+                        MaterialTheme.typography.titleLarge
+                )
+
+                Spacer(
+                    modifier =
+                        Modifier.weight(1f)
+                )
+
+                TextButton(
+                    onClick = {
+                        showAdminDialog = true
+                    }
                 ) {
 
                     Text(
-                        text =
-                            if (shiftActive) {
-                                "● JORNADA ACTIVA"
-                            } else {
-                                "FUERA DE JORNADA"
-                            },
+                        text = "⚙",
+                        color = Color.White,
                         style =
-                            MaterialTheme
-                                .typography
-                                .titleLarge,
-                        fontWeight =
-                            FontWeight.Bold
+                            MaterialTheme.typography.titleLarge
                     )
+                }
+            }
 
-                    Spacer(
-                        modifier =
-                            Modifier.height(20.dp)
-                    )
+            /*
+             * CONTENIDO
+             */
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(
+                        start = 14.dp,
+                        end = 14.dp,
+                        top = 12.dp,
+                        bottom = 4.dp
+                    ),
+                horizontalAlignment =
+                    Alignment.CenterHorizontally
+            ) {
 
-                    Text(
-                        text =
-                            currentTime.format(
-                                timeFormatter
-                            ),
-                        style =
-                            MaterialTheme
-                                .typography
-                                .displayMedium,
-                        fontWeight =
-                            FontWeight.Bold
-                    )
-
-                    Spacer(
-                        modifier =
-                            Modifier.height(28.dp)
-                    )
+                /*
+                 * DISPOSITIVO ACTIVO
+                 */
+                Card(
+                    modifier =
+                        Modifier.fillMaxWidth(),
+                    shape =
+                        RoundedCornerShape(16.dp),
+                    colors =
+                        CardDefaults.cardColors(
+                            containerColor =
+                                Color.White
+                        ),
+                    elevation =
+                        CardDefaults.cardElevation(
+                            defaultElevation = 2.dp
+                        )
+                ) {
 
                     Row(
-                        modifier =
-                            Modifier.fillMaxWidth(),
-                        horizontalArrangement =
-                            Arrangement.SpaceBetween
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(
+                                horizontal = 15.dp,
+                                vertical = 12.dp
+                            ),
+                        verticalAlignment =
+                            Alignment.CenterVertically
                     ) {
 
-                        Text(
-                            text = "09:00"
+                        Box(
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (
+                                        locationEnabled &&
+                                        internetConnected
+                                    ) {
+                                        Color(0xFFE4F8F0)
+                                    } else {
+                                        Color(0xFFFFEEEE)
+                                    }
+                                ),
+                            contentAlignment =
+                                Alignment.Center
+                        ) {
+
+                            Text(
+                                text =
+                                    if (
+                                        locationEnabled &&
+                                        internetConnected
+                                    ) {
+                                        "●"
+                                    } else {
+                                        "!"
+                                    },
+                                color =
+                                    if (
+                                        locationEnabled &&
+                                        internetConnected
+                                    ) {
+                                        ProntoGreen
+                                    } else {
+                                        ProntoDanger
+                                    },
+                                fontWeight =
+                                    FontWeight.Bold
+                            )
+                        }
+
+                        Spacer(
+                            modifier =
+                                Modifier.width(11.dp)
                         )
 
-                        Text(
-                            text = "18:30"
-                        )
+                        Column {
+
+                            Text(
+                                text =
+                                    if (
+                                        locationEnabled &&
+                                        internetConnected
+                                    ) {
+                                        "Dispositivo activo"
+                                    } else {
+                                        "Revisar dispositivo"
+                                    },
+                                color =
+                                    ProntoText,
+                                fontWeight =
+                                    FontWeight.Bold,
+                                style =
+                                    MaterialTheme.typography.titleMedium
+                            )
+
+                            Text(
+                                text =
+                                    if (
+                                        locationEnabled &&
+                                        internetConnected
+                                    ) {
+                                        "Todo en orden"
+                                    } else {
+                                        "Revisa la conexión del dispositivo"
+                                    },
+                                color =
+                                    ProntoMuted,
+                                style =
+                                    MaterialTheme.typography.bodySmall
+                            )
+                        }
                     }
-
-                    Spacer(
-                        modifier =
-                            Modifier.height(8.dp)
-                    )
-
-                    LinearProgressIndicator(
-                        progress = {
-                            progress
-                        },
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .height(12.dp)
-                    )
-
-                    Spacer(
-                        modifier =
-                            Modifier.height(12.dp)
-                    )
-
-                    Text(
-                        text =
-                            "${(progress * 100).toInt()}% de la jornada",
-                        fontWeight =
-                            FontWeight.SemiBold
-                    )
-
-                    Spacer(
-                        modifier =
-                            Modifier.height(16.dp)
-                    )
-
-                    Text(
-                        text =
-                            getShiftMessage(
-                                currentTime
-                            ),
-                        textAlign =
-                            TextAlign.Center,
-                        style =
-                            MaterialTheme
-                                .typography
-                                .bodyMedium
-                    )
                 }
-            }
 
-            Spacer(
-                modifier =
-                    Modifier.height(20.dp)
-            )
-
-            Card(
-                modifier =
-                    Modifier.fillMaxWidth()
-            ) {
-
-                Column(
+                Spacer(
                     modifier =
-                        Modifier.padding(20.dp)
+                        Modifier.height(10.dp)
+                )
+
+                /*
+                 * UBICACIÓN + INTERNET
+                 */
+                Row(
+                    modifier =
+                        Modifier.fillMaxWidth(),
+                    horizontalArrangement =
+                        Arrangement.spacedBy(10.dp)
                 ) {
 
-                    Text(
-                        text =
-                            "Estado del dispositivo",
-                        style =
-                            MaterialTheme
-                                .typography
-                                .titleMedium,
-                        fontWeight =
-                            FontWeight.Bold
-                    )
-
-                    Spacer(
+                    StatusCard(
                         modifier =
-                            Modifier.height(16.dp)
-                    )
-
-                    Text(
-                        text =
+                            Modifier.weight(1f),
+                        symbol = "●",
+                        title = "Ubicación",
+                        value =
                             if (locationEnabled) {
-                                "📍 Ubicación: activa"
+                                "Activa"
                             } else {
-                                "⚠️ Ubicación: desactivada"
-                            }
+                                "Desactivada"
+                            },
+                        available =
+                            locationEnabled
                     )
 
-                    Spacer(
+                    StatusCard(
                         modifier =
-                            Modifier.height(10.dp)
-                    )
-
-                    Text(
-                        text =
+                            Modifier.weight(1f),
+                        symbol = "◉",
+                        title = "Internet",
+                        value =
                             if (internetConnected) {
-                                "🌐 Internet: conectado"
+                                "Con conexión"
                             } else {
-                                "⚠️ Internet: sin conexión"
-                            }
+                                "Sin conexión"
+                            },
+                        available =
+                            internetConnected
                     )
+                }
 
-                    Spacer(
+                Spacer(
+                    modifier =
+                        Modifier.height(13.dp)
+                )
+
+                /*
+                 * JORNADA
+                 */
+                Card(
+                    modifier =
+                        Modifier.fillMaxWidth(),
+                    shape =
+                        RoundedCornerShape(18.dp),
+                    colors =
+                        CardDefaults.cardColors(
+                            containerColor =
+                                Color.White
+                        ),
+                    elevation =
+                        CardDefaults.cardElevation(
+                            defaultElevation = 1.dp
+                        )
+                ) {
+
+                    Column(
                         modifier =
-                            Modifier.height(10.dp)
+                            Modifier.fillMaxWidth(),
+                        horizontalAlignment =
+                            Alignment.CenterHorizontally
+                    ) {
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(
+                                    start = 15.dp,
+                                    end = 15.dp,
+                                    top = 12.dp
+                                ),
+                            verticalAlignment =
+                                Alignment.CenterVertically
+                        ) {
+
+                            Text(
+                                text = "▣",
+                                color =
+                                    ProntoBlue,
+                                fontWeight =
+                                    FontWeight.Bold
+                            )
+
+                            Spacer(
+                                modifier =
+                                    Modifier.width(7.dp)
+                            )
+
+                            Text(
+                                text =
+                                    "Tu jornada de hoy",
+                                color =
+                                    ProntoText,
+                                fontWeight =
+                                    FontWeight.Bold,
+                                style =
+                                    MaterialTheme.typography.titleMedium
+                            )
+                        }
+
+                        Spacer(
+                            modifier =
+                                Modifier.height(10.dp)
+                        )
+
+                        ShiftProgressCircle(
+                            progress = progress,
+                            currentTime = currentTime
+                        )
+
+                        Spacer(
+                            modifier =
+                                Modifier.height(10.dp)
+                        )
+
+                        Text(
+                            text =
+                                when {
+
+                                    currentTime <
+                                            shiftStart ->
+
+                                        "ProntoTix iniciará automáticamente tu registro"
+
+                                    currentTime >=
+                                            shiftEnd ->
+
+                                        "Gracias por tu trabajo de hoy"
+
+                                    else ->
+
+                                        "Tu actividad se está registrando"
+                                },
+                            modifier =
+                                Modifier.padding(
+                                    start = 24.dp,
+                                    end = 24.dp,
+                                    bottom = 13.dp
+                                ),
+                            textAlign =
+                                TextAlign.Center,
+                            color =
+                                ProntoMuted,
+                            style =
+                                MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+
+                /*
+                 * ESTE SPACER ES EL QUE EMPUJA
+                 * PAISAJE + MOTO HACIA ABAJO
+                 */
+                Spacer(
+                    modifier =
+                        Modifier.weight(1f)
+                )
+
+                /*
+                 * PAISAJE INFERIOR
+                 */
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(125.dp),
+                    contentAlignment =
+                        Alignment.BottomCenter
+                ) {
+
+                    Image(
+                        painter =
+                            painterResource(
+                                R.drawable.prontotix_landscape
+                            ),
+                        contentDescription =
+                            "Paisaje",
+                        modifier =
+                            Modifier.fillMaxSize(),
+                        contentScale =
+                            ContentScale.FillBounds
                     )
 
-                    Text(
-                        text =
-                            if (shiftActive) {
-                                "⚙️ ProntoTix está operando automáticamente"
-                            } else {
-                                "⚙️ Esperando próxima jornada"
-                            }
+                    /*
+                     * MOTO PEQUEÑA SUPERPUESTA
+                     */
+                    Image(
+                        painter =
+                            painterResource(
+                                R.drawable.prontotix_moto
+                            ),
+                        contentDescription =
+                            "Moto ProntoTix",
+                        modifier = Modifier
+                            .width(82.dp)
+                            .height(62.dp)
+                            .offset(
+                                y = (-4).dp
+                            ),
+                        contentScale =
+                            ContentScale.Fit
                     )
                 }
-            }
-
-            Spacer(
-                modifier =
-                    Modifier.weight(1f)
-            )
-
-            Text(
-                text =
-                    "ProntoTix funciona automáticamente durante el horario de trabajo.",
-                textAlign =
-                    TextAlign.Center,
-                style =
-                    MaterialTheme
-                        .typography
-                        .bodySmall
-            )
-
-            Spacer(
-                modifier =
-                    Modifier.height(16.dp)
-            )
-
-            Button(
-                onClick = {
-                    showAdminDialog = true
-                }
-            ) {
 
                 Text(
                     text =
-                        "🔒 Administrador"
+                        "Tu trabajo en movimiento",
+                    modifier =
+                        Modifier.padding(
+                            top = 3.dp,
+                            bottom = 2.dp
+                        ),
+                    color =
+                        Color(0xFF315C9C),
+                    fontWeight =
+                        FontWeight.Medium,
+                    style =
+                        MaterialTheme.typography.bodySmall
                 )
             }
         }
     }
 
+    /*
+     * ADMIN
+     */
     if (showAdminDialog) {
 
         AlertDialog(
             onDismissRequest = {
 
-                showAdminDialog =
-                    false
-
-                adminInput =
-                    ""
-
-                adminError =
-                    false
+                showAdminDialog = false
+                adminInput = ""
+                adminError = false
             },
             title = {
 
@@ -426,11 +616,8 @@ fun DriverHomeScreen(
                             adminInput,
                         onValueChange = {
 
-                            adminInput =
-                                it
-
-                            adminError =
-                                false
+                            adminInput = it
+                            adminError = false
                         },
                         label = {
 
@@ -441,17 +628,14 @@ fun DriverHomeScreen(
                         },
                         visualTransformation =
                             PasswordVisualTransformation(),
-                        singleLine =
-                            true
+                        singleLine = true
                     )
 
                     if (adminError) {
 
                         Spacer(
                             modifier =
-                                Modifier.height(
-                                    8.dp
-                                )
+                                Modifier.height(8.dp)
                         )
 
                         Text(
@@ -475,21 +659,15 @@ fun DriverHomeScreen(
                             adminPassword
                         ) {
 
-                            showAdminDialog =
-                                false
-
-                            adminInput =
-                                ""
-
-                            adminError =
-                                false
+                            showAdminDialog = false
+                            adminInput = ""
+                            adminError = false
 
                             onAdminClick()
 
                         } else {
 
-                            adminError =
-                                true
+                            adminError = true
                         }
                     }
                 ) {
@@ -504,14 +682,9 @@ fun DriverHomeScreen(
                 TextButton(
                     onClick = {
 
-                        showAdminDialog =
-                            false
-
-                        adminInput =
-                            ""
-
-                        adminError =
-                            false
+                        showAdminDialog = false
+                        adminInput = ""
+                        adminError = false
                     }
                 ) {
 
@@ -524,21 +697,203 @@ fun DriverHomeScreen(
     }
 }
 
+@Composable
+private fun StatusCard(
+    modifier: Modifier = Modifier,
+    symbol: String,
+    title: String,
+    value: String,
+    available: Boolean
+) {
+
+    Card(
+        modifier =
+            modifier,
+        shape =
+            RoundedCornerShape(16.dp),
+        colors =
+            CardDefaults.cardColors(
+                containerColor =
+                    Color.White
+            ),
+        elevation =
+            CardDefaults.cardElevation(
+                defaultElevation = 2.dp
+            )
+    ) {
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(
+                    vertical = 12.dp
+                ),
+            horizontalAlignment =
+                Alignment.CenterHorizontally
+        ) {
+
+            Text(
+                text =
+                    symbol,
+                color =
+                    if (available) {
+                        ProntoBlue
+                    } else {
+                        ProntoDanger
+                    },
+                style =
+                    MaterialTheme.typography.titleLarge,
+                fontWeight =
+                    FontWeight.Bold
+            )
+
+            Spacer(
+                modifier =
+                    Modifier.height(3.dp)
+            )
+
+            Text(
+                text =
+                    title,
+                color =
+                    ProntoText,
+                fontWeight =
+                    FontWeight.SemiBold,
+                style =
+                    MaterialTheme.typography.bodySmall
+            )
+
+            Text(
+                text =
+                    value,
+                color =
+                    if (available) {
+                        ProntoGreen
+                    } else {
+                        ProntoDanger
+                    },
+                fontWeight =
+                    FontWeight.SemiBold,
+                style =
+                    MaterialTheme.typography.bodySmall
+            )
+        }
+    }
+}
+
+@Composable
+private fun ShiftProgressCircle(
+    progress: Float,
+    currentTime: LocalTime
+) {
+
+    val start =
+        LocalTime.of(9, 0)
+
+    val end =
+        LocalTime.of(18, 30)
+
+    val completed =
+        currentTime >= end
+
+    val active =
+        currentTime >= start &&
+                currentTime < end
+
+    Box(
+        modifier =
+            Modifier.size(175.dp),
+        contentAlignment =
+            Alignment.Center
+    ) {
+
+        CircularProgressIndicator(
+            progress = {
+                progress
+            },
+            modifier =
+                Modifier.fillMaxSize(),
+            strokeWidth =
+                12.dp,
+            color =
+                if (completed) {
+                    ProntoGreen
+                } else {
+                    ProntoBlue
+                },
+            trackColor =
+                Color(0xFFE1EAF5)
+        )
+
+        Column(
+            horizontalAlignment =
+                Alignment.CenterHorizontally
+        ) {
+
+            Text(
+                text =
+                    when {
+                        completed -> "✓"
+                        active -> "■"
+                        else -> "○"
+                    },
+                color =
+                    when {
+                        completed ->
+                            ProntoGreen
+
+                        active ->
+                            Color(0xFF174C8F)
+
+                        else ->
+                            Color(0xFF174C8F)
+                    },
+                style =
+                    MaterialTheme.typography.headlineMedium,
+                fontWeight =
+                    FontWeight.Bold
+            )
+
+            Spacer(
+                modifier =
+                    Modifier.height(4.dp)
+            )
+
+            Text(
+                text =
+                    when {
+
+                        completed ->
+                            "JORNADA\nFINALIZADA"
+
+                        active ->
+                            "EN JORNADA"
+
+                        else ->
+                            "PRÓXIMA\nJORNADA"
+                    },
+                textAlign =
+                    TextAlign.Center,
+                color =
+                    ProntoText,
+                style =
+                    MaterialTheme.typography.titleMedium,
+                fontWeight =
+                    FontWeight.Bold
+            )
+        }
+    }
+}
+
 private fun calculateShiftProgress(
     currentTime: LocalTime
 ): Float {
 
     val start =
-        LocalTime.of(
-            9,
-            0
-        )
+        LocalTime.of(9, 0)
 
     val end =
-        LocalTime.of(
-            18,
-            30
-        )
+        LocalTime.of(18, 30)
 
     if (currentTime <= start) {
         return 0f
@@ -574,35 +929,6 @@ private fun calculateShiftProgress(
         )
 }
 
-private fun getShiftMessage(
-    currentTime: LocalTime
-): String {
-
-    val start =
-        LocalTime.of(
-            9,
-            0
-        )
-
-    val end =
-        LocalTime.of(
-            18,
-            30
-        )
-
-    return when {
-
-        currentTime < start ->
-            "La jornada iniciará automáticamente a las 09:00"
-
-        currentTime >= end ->
-            "La jornada ha finalizado"
-
-        else ->
-            "ProntoTix está trabajando en segundo plano"
-    }
-}
-
 private fun checkLocationEnabled(
     context: Context
 ): Boolean {
@@ -612,7 +938,8 @@ private fun checkLocationEnabled(
             Context.LOCATION_SERVICE
         ) as LocationManager
 
-    return locationManager.isLocationEnabled
+    return locationManager
+        .isLocationEnabled
 }
 
 private fun checkInternetConnected(
@@ -625,7 +952,8 @@ private fun checkInternetConnected(
         ) as ConnectivityManager
 
     val network =
-        connectivityManager.activeNetwork
+        connectivityManager
+            .activeNetwork
             ?: return false
 
     val capabilities =
@@ -636,9 +964,11 @@ private fun checkInternetConnected(
             ?: return false
 
     return capabilities.hasCapability(
-        NetworkCapabilities.NET_CAPABILITY_INTERNET
+        NetworkCapabilities
+            .NET_CAPABILITY_INTERNET
     ) &&
             capabilities.hasCapability(
-                NetworkCapabilities.NET_CAPABILITY_VALIDATED
+                NetworkCapabilities
+                    .NET_CAPABILITY_VALIDATED
             )
 }
