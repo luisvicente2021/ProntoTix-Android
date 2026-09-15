@@ -270,6 +270,13 @@ object DevicePolicyManagerHelper {
                     UserManager.DISALLOW_AIRPLANE_MODE
                 )
 
+                // No permitir modificar la configuración
+                // de redes móviles
+                dpm.addUserRestriction(
+                    admin,
+                    UserManager.DISALLOW_CONFIG_MOBILE_NETWORKS
+                )
+
                 // No permitir apagar/modificar ubicación
                 dpm.addUserRestriction(
                     admin,

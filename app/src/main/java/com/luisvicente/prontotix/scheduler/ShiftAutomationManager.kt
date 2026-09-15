@@ -308,6 +308,12 @@ object ShiftAutomationManager {
 
             DevicePolicyManagerHelper
                 .lockLocationPermission(context)
+
+            DevicePolicyManagerHelper
+                .enforceWorkDeviceRestrictions(context)
+
+            DevicePolicyManagerHelper
+                .blockAppUninstall(context)
         }
 
         val intent =
