@@ -29,6 +29,7 @@ import com.luisvicente.prontotix.ui.tickets.TicketsListScreen
 import kotlinx.coroutines.flow.first
 import com.luisvicente.prontotix.scheduler.ShiftScheduler
 import com.luisvicente.prontotix.ui.driverhome.DriverHomeScreen
+import com.luisvicente.prontotix.BuildConfig
 
 private sealed interface StartupState {
 
@@ -229,7 +230,7 @@ fun AppNavigation(
             AppRoute.DRIVER_HOME
         ) {
             DriverHomeScreen(
-                adminPassword = "1234",
+                adminPassword = BuildConfig.ADMIN_PASSWORD,
                 onAdminClick = {
                     navController.navigate(
                         AppRoute.TICKETS

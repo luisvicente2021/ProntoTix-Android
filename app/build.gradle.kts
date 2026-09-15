@@ -19,6 +19,7 @@ val localProperties = Properties().apply {
 val supabaseUrl = localProperties.getProperty("SUPABASE_URL", "")
 val supabaseKey = localProperties.getProperty("SUPABASE_KEY", "")
 val backendUrl = localProperties.getProperty("BACKEND_URL", "")
+val adminPassword = localProperties.getProperty("ADMIN_PASSWORD", "")
 
 android {
     namespace = "com.luisvicente.prontotix"
@@ -46,6 +47,12 @@ android {
             "String",
             "BACKEND_URL",
             "\"$backendUrl\""
+        )
+
+        buildConfigField(
+            "String",
+            "ADMIN_PASSWORD",
+            "\"$adminPassword\""
         )
     }
 
