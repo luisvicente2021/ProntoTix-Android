@@ -51,6 +51,12 @@ import com.luisvicente.prontotix.R
 import kotlinx.coroutines.delay
 import java.time.Duration
 import java.time.LocalTime
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.text.input.VisualTransformation
 
 private val ProntoNavy = Color(0xFF0B1930)
 private val ProntoBlue = Color(0xFF1677FF)
@@ -100,6 +106,10 @@ fun DriverHomeScreen(
 
     var adminInput by remember {
         mutableStateOf("")
+    }
+
+    var adminPasswordVisible by remember {
+        mutableStateOf(false)
     }
 
     var adminError by remember {
@@ -615,19 +625,43 @@ fun DriverHomeScreen(
                         value =
                             adminInput,
                         onValueChange = {
-
                             adminInput = it
                             adminError = false
                         },
                         label = {
-
                             Text(
-                                text =
-                                    "Contraseña"
+                                text = "Contraseña"
                             )
                         },
                         visualTransformation =
-                            PasswordVisualTransformation(),
+                            if (adminPasswordVisible) {
+                                VisualTransformation.None
+                            } else {
+                                PasswordVisualTransformation()
+                            },
+                        trailingIcon = {
+                            IconButton(
+                                onClick = {
+                                    adminPasswordVisible =
+                                        !adminPasswordVisible
+                                }
+                            ) {
+                                Icon(
+                                    imageVector =
+                                        if (adminPasswordVisible) {
+                                            Icons.Default.VisibilityOff
+                                        } else {
+                                            Icons.Default.Visibility
+                                        },
+                                    contentDescription =
+                                        if (adminPasswordVisible) {
+                                            "Ocultar contraseña"
+                                        } else {
+                                            "Mostrar contraseña"
+                                        }
+                                )
+                            }
+                        },
                         singleLine = true
                     )
 
@@ -685,6 +719,7 @@ fun DriverHomeScreen(
                         showAdminDialog = false
                         adminInput = ""
                         adminError = false
+                        adminPasswordVisible = false
                     }
                 ) {
 
