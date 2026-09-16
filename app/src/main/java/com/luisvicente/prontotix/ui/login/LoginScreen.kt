@@ -12,6 +12,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -85,6 +91,10 @@ fun LoginScreen(
 
     var password by remember {
         mutableStateOf("")
+    }
+
+    var passwordVisible by remember {
+        mutableStateOf(false)
     }
 
     var credentialMessage by remember {
@@ -194,20 +204,34 @@ fun LoginScreen(
                 Alignment.CenterHorizontally
         ) {
 
-            Image(
-                painter =
-                    painterResource(
-                        id =
-                            R.drawable
-                                .prontotix_logo
-                    ),
-                contentDescription =
-                    "Logo ProntoTix",
+            Box(
                 modifier =
-                    Modifier.size(
-                        110.dp
-                    )
-            )
+                    Modifier
+                        .size(120.dp)
+                        .background(
+                            color =
+                                androidx.compose.ui.graphics.Color(
+                                    0xFF071A2B
+                                ),
+                            shape =
+                                RoundedCornerShape(24.dp)
+                        )
+                        .padding(12.dp),
+                contentAlignment =
+                    Alignment.Center
+            ) {
+                Image(
+                    painter =
+                        painterResource(
+                            id =
+                                R.drawable.prontotix_logo
+                        ),
+                    contentDescription =
+                        "Logo ProntoTix",
+                    modifier =
+                        Modifier.fillMaxSize()
+                )
+            }
 
             Spacer(
                 modifier =
@@ -375,44 +399,57 @@ fun LoginScreen(
                             )
                     )
 
-                    /*
-                     * CONTRASEÑA
-                     */
                     OutlinedTextField(
-                        value =
-                            password,
+                        value = password,
                         onValueChange = {
                             password = it
-
-                            /*
-                             * Si modifica manualmente
-                             * la contraseña, permitimos
-                             * que Android pregunte si
-                             * quiere actualizar/guardar.
-                             */
-                            credentialWasLoaded =
-                                false
+                            credentialWasLoaded = false
                         },
                         label = {
-                            Text(
-                                "Contraseña"
-                            )
+                            Text("Contraseña")
                         },
-                        enabled =
-                            !uiState.isLoading,
-                        singleLine =
-                            true,
+                        enabled = !uiState.isLoading,
+                        singleLine = true,
+
                         visualTransformation =
-                            PasswordVisualTransformation(),
+                            if (passwordVisible) {
+                                VisualTransformation.None
+                            } else {
+                                PasswordVisualTransformation()
+                            },
+
+                        trailingIcon = {
+                            IconButton(
+                                onClick = {
+                                    passwordVisible = !passwordVisible
+                                }
+                            ) {
+                                Icon(
+                                    imageVector =
+                                        if (passwordVisible) {
+                                            Icons.Default.VisibilityOff
+                                        } else {
+                                            Icons.Default.Visibility
+                                        },
+                                    contentDescription =
+                                        if (passwordVisible) {
+                                            "Ocultar contraseña"
+                                        } else {
+                                            "Mostrar contraseña"
+                                        }
+                                )
+                            }
+                        },
+
                         keyboardOptions =
                             KeyboardOptions(
                                 keyboardType =
                                     KeyboardType.Password
                             ),
+
                         shape =
-                            RoundedCornerShape(
-                                14.dp
-                            ),
+                            RoundedCornerShape(14.dp),
+
                         modifier =
                             Modifier.fillMaxWidth()
                     )
