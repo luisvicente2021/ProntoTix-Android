@@ -34,6 +34,8 @@ import com.luisvicente.prontotix.admin.DevicePolicyManagerHelper
 import com.luisvicente.prontotix.scheduler.ShiftAutomationManager
 import kotlinx.coroutines.launch
 import com.luisvicente.prontotix.admin.MaintenanceModeManager
+import com.luisvicente.prontotix.data.local.SessionManager
+import androidx.compose.foundation.clickable
 
 private val ProntoNavy =
     Color(0xFF0B1930)
@@ -58,7 +60,9 @@ private val ProntoMuted =
 
 @Composable
 fun AdminScreen(
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onLogout: () -> Unit,
+    onDiagnosticsClick: () -> Unit
 ) {
 
     val context =
@@ -117,9 +121,13 @@ fun AdminScreen(
                         .typography
                         .headlineMedium,
                 modifier =
-                    Modifier.padding(
-                        end = 14.dp
-                    )
+                    Modifier
+                        .clickable {
+                            onBack()
+                        }
+                        .padding(
+                            end = 14.dp
+                        )
             )
 
             Column(
@@ -149,22 +157,6 @@ fun AdminScreen(
                         MaterialTheme
                             .typography
                             .bodySmall
-                )
-            }
-
-            OutlinedButton(
-                onClick =
-                    onBack,
-                colors =
-                    ButtonDefaults
-                        .outlinedButtonColors(
-                            contentColor =
-                                Color.White
-                        )
-            ) {
-
-                Text(
-                    "Salir"
                 )
             }
         }
@@ -500,6 +492,68 @@ fun AdminScreen(
                     Modifier.height(16.dp)
             )
 
+            OutlinedButton(
+                onClick =
+                    onDiagnosticsClick,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(54.dp),
+                shape =
+                    RoundedCornerShape(14.dp)
+            ) {
+
+                Text(
+                    text =
+                        "Diagnóstico del dispositivo",
+                    color =
+                        ProntoBlue,
+                    fontWeight =
+                        FontWeight.Bold
+                )
+            }
+
+            Spacer(
+                modifier =
+                    Modifier.height(16.dp)
+            )
+
+            /*
+             * CERRAR SESIÓN
+             */
+            OutlinedButton(
+                onClick = {
+                    scope.launch {
+
+                        actionMessage =
+                            "Cerrando sesión..."
+
+                        SessionManager(
+                            context.applicationContext
+                        ).clearSession()
+
+                        onLogout()
+                    }
+                },
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(54.dp),
+                shape =
+                    RoundedCornerShape(14.dp)
+            ) {
+
+                Text(
+                    text = "Cerrar sesión",
+                    color = ProntoDanger,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Spacer(
+                modifier =
+                    Modifier.height(16.dp)
+            )
 
             actionMessage?.let {
                     message ->

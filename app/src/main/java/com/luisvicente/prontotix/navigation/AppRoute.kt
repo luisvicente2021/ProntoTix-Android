@@ -6,6 +6,7 @@ object AppRoute {
     const val DRIVER_HOME = "driver_home"
     const val ADMIN = "admin"
     const val TICKETS = "tickets"
+    const val DIAGNOSTICS = "diagnostics"
 
     const val TICKET_DETAIL =
         "ticket_detail/{ticketId}"

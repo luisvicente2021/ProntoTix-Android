@@ -204,6 +204,8 @@ class LocationTrackingService : Service() {
     override fun onCreate() {
         super.onCreate()
 
+        TrackingStatusManager.setRunning(true)
+
         createNotificationChannel()
 
         registerLocationStateReceiver()
@@ -563,6 +565,10 @@ class LocationTrackingService : Service() {
         unregisterLocationStateReceiver()
 
         serviceScope.cancel()
+
+        TrackingStatusManager.setRunning(
+            false
+        )
 
         super.onDestroy()
     }

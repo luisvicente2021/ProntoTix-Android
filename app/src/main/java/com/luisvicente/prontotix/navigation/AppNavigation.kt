@@ -31,6 +31,7 @@ import com.luisvicente.prontotix.scheduler.ShiftScheduler
 import com.luisvicente.prontotix.ui.driverhome.DriverHomeScreen
 import com.luisvicente.prontotix.BuildConfig
 import com.luisvicente.prontotix.ui.admin.AdminScreen
+import com.luisvicente.prontotix.ui.diagnostics.DeviceDiagnosticsScreen
 
 private sealed interface StartupState {
 
@@ -245,6 +246,36 @@ fun AppNavigation(
         ) {
 
             AdminScreen(
+                onBack = {
+                    navController
+                        .popBackStack()
+                },
+
+                onLogout = {
+                    navController.navigate(
+                        AppRoute.LOGIN
+                    ) {
+                        popUpTo(0) {
+                            inclusive = true
+                        }
+
+                        launchSingleTop = true
+                    }
+                },
+
+                onDiagnosticsClick = {
+                    navController.navigate(
+                        AppRoute.DIAGNOSTICS
+                    )
+                }
+            )
+        }
+
+        composable(
+            AppRoute.DIAGNOSTICS
+        ) {
+
+            DeviceDiagnosticsScreen(
                 onBack = {
                     navController
                         .popBackStack()
