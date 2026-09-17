@@ -20,51 +20,79 @@ class BootReceiver : BroadcastReceiver() {
         intent: Intent
     ) {
 
-        if (intent.action != Intent.ACTION_BOOT_COMPLETED) {
+        val action = intent.action
+
+        if (
+            action != Intent.ACTION_BOOT_COMPLETED &&
+            action != Intent.ACTION_MY_PACKAGE_REPLACED
+        ) {
             return
         }
 
-        Log.i(
-            TAG,
-            "Teléfono reiniciado"
-        )
-
-        // Android elimina las alarmas después
-        // de reiniciar, así que las programamos otra vez.
-        ShiftScheduler.scheduleDailyShift(
+        val appContext =
             context.applicationContext
+
+        when (action) {
+
+            Intent.ACTION_BOOT_COMPLETED ->
+                Log.i(
+                    TAG,
+                    "Teléfono reiniciado"
+                )
+
+            Intent.ACTION_MY_PACKAGE_REPLACED ->
+                Log.i(
+                    TAG,
+                    "ProntoTix actualizado"
+                )
+        }
+
+        /*
+         * Las alarmas pueden necesitar ser
+         * programadas nuevamente después
+         * de un reinicio o actualización.
+         */
+        ShiftScheduler.scheduleDailyShift(
+            appContext
         )
 
-        val pendingResult = goAsync()
+        val pendingResult =
+            goAsync()
 
         CoroutineScope(Dispatchers.IO).launch {
 
             try {
 
-                val now = Calendar.getInstance()
+                val now =
+                    Calendar.getInstance()
 
                 val minutes =
                     now.get(Calendar.HOUR_OF_DAY) * 60 +
-                    now.get(Calendar.MINUTE)
+                            now.get(Calendar.MINUTE)
 
                 Log.i(
                     TAG,
-                    "Hora detectada después del reinicio: $minutes minutos"
+                    "Hora detectada: $minutes minutos"
                 )
 
-                val shiftStart = 9 * 60
-                val shiftEnd = 18 * 60 + 30
+                val shiftStart =
+                    9 * 60
 
-                if (minutes in shiftStart until shiftEnd) {
+                val shiftEnd =
+                    18 * 60 + 30
+
+                if (
+                    minutes in shiftStart until shiftEnd
+                ) {
 
                     Log.i(
                         TAG,
-                        "Reinicio dentro de jornada. Recuperando seguimiento."
+                        "Dentro de jornada. Recuperando seguimiento."
                     )
 
                     ShiftAutomationManager
                         .startAutomaticShift(
-                            context.applicationContext
+                            appContext
                         )
 
                     Log.i(
@@ -76,7 +104,7 @@ class BootReceiver : BroadcastReceiver() {
 
                     Log.i(
                         TAG,
-                        "Reinicio fuera del horario de jornada"
+                        "Fuera del horario de jornada"
                     )
                 }
 
@@ -84,7 +112,7 @@ class BootReceiver : BroadcastReceiver() {
 
                 Log.e(
                     TAG,
-                    "Error recuperando jornada después del reinicio",
+                    "Error recuperando jornada",
                     exception
                 )
 
