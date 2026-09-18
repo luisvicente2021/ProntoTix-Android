@@ -56,7 +56,7 @@ class ShiftAlarmReceiver :
 
                         Log.i(
                             TAG,
-                            "=== 18:30 FIN AUTOMÁTICO ==="
+                            "=== FIN AUTOMÁTICO DE JORNADA ==="
                         )
 
                         ShiftAutomationManager

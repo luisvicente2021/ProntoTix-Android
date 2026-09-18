@@ -55,7 +55,7 @@ import com.luisvicente.prontotix.R
 import com.luisvicente.prontotix.data.local.SessionManager
 import kotlinx.coroutines.launch
 import com.luisvicente.prontotix.scheduler.ShiftAutomationManager
-import java.time.LocalTime
+import com.luisvicente.prontotix.scheduler.WorkSchedule
 
 @Composable
 fun LoginScreen(
@@ -166,14 +166,8 @@ fun LoginScreen(
                      */
                 }
             }
-            val currentTime = LocalTime.now()
-
-            val shiftStart = LocalTime.of(9, 0)
-            val shiftEnd = LocalTime.of(18, 30)
-
             if (
-                !currentTime.isBefore(shiftStart) &&
-                currentTime.isBefore(shiftEnd)
+                WorkSchedule.isWithinWorkingHours()
             ) {
                 ShiftAutomationManager.startAutomaticShift(
                     context.applicationContext

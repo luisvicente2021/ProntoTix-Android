@@ -49,7 +49,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.luisvicente.prontotix.R
 import kotlinx.coroutines.delay
+import com.luisvicente.prontotix.scheduler.WorkSchedule
 import java.time.Duration
+import java.time.LocalDate
 import java.time.LocalTime
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
@@ -142,11 +144,14 @@ fun DriverHomeScreen(
         }
     }
 
+    val today =
+        LocalDate.now()
+
     val shiftStart =
-        LocalTime.of(9, 0)
+        WorkSchedule.startTime(today)
 
     val shiftEnd =
-        LocalTime.of(18, 30)
+        WorkSchedule.endTime(today)
 
     Scaffold(
         containerColor = ProntoBackground
@@ -495,13 +500,18 @@ fun DriverHomeScreen(
                             text =
                                 when {
 
+                                    shiftStart == null ||
+                                        shiftEnd == null ->
+
+                                        "Hoy no hay jornada programada"
+
                                     currentTime <
-                                            shiftStart ->
+                                        shiftStart ->
 
                                         "ProntoTix iniciará automáticamente tu registro"
 
                                     currentTime >=
-                                            shiftEnd ->
+                                        shiftEnd ->
 
                                         "Gracias por tu trabajo de hoy"
 
@@ -822,18 +832,27 @@ private fun ShiftProgressCircle(
     currentTime: LocalTime
 ) {
 
+    val today =
+        LocalDate.now()
+
     val start =
-        LocalTime.of(9, 0)
+        WorkSchedule.startTime(today)
 
     val end =
-        LocalTime.of(18, 30)
+        WorkSchedule.endTime(today)
+
+    val workingDay =
+        start != null &&
+            end != null
 
     val completed =
-        currentTime >= end
+        workingDay &&
+            currentTime >= end
 
     val active =
-        currentTime >= start &&
-                currentTime < end
+        workingDay &&
+            currentTime >= start &&
+            currentTime < end
 
     Box(
         modifier =
@@ -898,6 +917,9 @@ private fun ShiftProgressCircle(
                 text =
                     when {
 
+                        !workingDay ->
+                            "PRÓXIMA\nJORNADA"
+
                         completed ->
                             "JORNADA\nFINALIZADA"
 
@@ -924,11 +946,16 @@ private fun calculateShiftProgress(
     currentTime: LocalTime
 ): Float {
 
+    val today =
+        LocalDate.now()
+
     val start =
-        LocalTime.of(9, 0)
+        WorkSchedule.startTime(today)
+            ?: return 0f
 
     val end =
-        LocalTime.of(18, 30)
+        WorkSchedule.endTime(today)
+            ?: return 0f
 
     if (currentTime <= start) {
         return 0f

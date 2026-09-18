@@ -7,7 +7,7 @@ import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.util.Calendar
+import java.time.LocalDateTime
 
 class BootReceiver : BroadcastReceiver() {
 
@@ -64,25 +64,16 @@ class BootReceiver : BroadcastReceiver() {
             try {
 
                 val now =
-                    Calendar.getInstance()
-
-                val minutes =
-                    now.get(Calendar.HOUR_OF_DAY) * 60 +
-                            now.get(Calendar.MINUTE)
+                    LocalDateTime.now()
 
                 Log.i(
                     TAG,
-                    "Hora detectada: $minutes minutos"
+                    "Fecha y hora detectadas: $now"
                 )
 
-                val shiftStart =
-                    9 * 60
-
-                val shiftEnd =
-                    18 * 60 + 30
-
                 if (
-                    minutes in shiftStart until shiftEnd
+                    WorkSchedule
+                        .isWithinWorkingHours(now)
                 ) {
 
                     Log.i(

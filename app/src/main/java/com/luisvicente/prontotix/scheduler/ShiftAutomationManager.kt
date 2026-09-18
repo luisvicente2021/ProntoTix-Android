@@ -144,7 +144,7 @@ object ShiftAutomationManager {
          * PRIMERO detenemos el rastreo.
          *
          * Así garantizamos que después
-         * de las 18:30 no continuemos
+         * del fin de jornada no continuemos
          * enviando coordenadas aunque
          * el backend tenga algún problema.
          */

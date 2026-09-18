@@ -6,7 +6,10 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.util.Log
-import java.util.Calendar
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.ZoneId
 
 object ShiftScheduler {
 
@@ -21,29 +24,87 @@ object ShiftScheduler {
     private const val START_REQUEST_CODE = 900
     private const val END_REQUEST_CODE = 1830
 
-    fun scheduleDailyShift(context: Context) {
+    fun scheduleDailyShift(
+        context: Context
+    ) {
+
+        val now =
+            LocalDateTime.now()
+
+        val nextStart =
+            findNextAlarm(
+                now = now,
+                getTime = {
+                    WorkSchedule.startTime(it)
+                }
+            )
+
+        val nextEnd =
+            findNextAlarm(
+                now = now,
+                getTime = {
+                    WorkSchedule.endTime(it)
+                }
+            )
 
         scheduleAlarm(
             context = context,
-            hour = 9,
-            minute = 0,
+            dateTime = nextStart,
             action = ACTION_START_SHIFT,
             requestCode = START_REQUEST_CODE
         )
 
         scheduleAlarm(
             context = context,
-            hour = 18,
-            minute = 30,
+            dateTime = nextEnd,
             action = ACTION_END_SHIFT,
             requestCode = END_REQUEST_CODE
         )
     }
 
+    private fun findNextAlarm(
+        now: LocalDateTime,
+        getTime: (LocalDate) -> LocalTime?
+    ): LocalDateTime {
+
+        var date =
+            now.toLocalDate()
+
+        repeat(8) {
+
+            val time =
+                getTime(date)
+
+            if (time != null) {
+
+                val candidate =
+                    LocalDateTime.of(
+                        date,
+                        time
+                    )
+
+                if (candidate.isAfter(now)) {
+                    return candidate
+                }
+            }
+
+            date =
+                date.plusDays(1)
+        }
+
+        /*
+         * Con la configuración actual siempre
+         * encontraremos un día laborable dentro
+         * de los siguientes 8 días.
+         */
+        error(
+            "No se encontró próxima alarma de jornada"
+        )
+    }
+
     private fun scheduleAlarm(
         context: Context,
-        hour: Int,
-        minute: Int,
+        dateTime: LocalDateTime,
         action: String,
         requestCode: Int
     ) {
@@ -67,77 +128,56 @@ object ShiftScheduler {
                 requestCode,
                 intent,
                 PendingIntent.FLAG_UPDATE_CURRENT or
-                    PendingIntent.FLAG_IMMUTABLE
+                        PendingIntent.FLAG_IMMUTABLE
             )
 
-        val calendar =
-            Calendar.getInstance().apply {
-
-                set(
-                    Calendar.HOUR_OF_DAY,
-                    hour
+        val triggerAtMillis =
+            dateTime
+                .atZone(
+                    ZoneId.systemDefault()
                 )
-
-                set(
-                    Calendar.MINUTE,
-                    minute
-                )
-
-                set(
-                    Calendar.SECOND,
-                    0
-                )
-
-                set(
-                    Calendar.MILLISECOND,
-                    0
-                )
-
-                if (timeInMillis <= System.currentTimeMillis()) {
-                    add(
-                        Calendar.DAY_OF_YEAR,
-                        1
-                    )
-                }
-            }
+                .toInstant()
+                .toEpochMilli()
 
         val canScheduleExact =
-            if (Build.VERSION.SDK_INT >=
+            if (
+                Build.VERSION.SDK_INT >=
                 Build.VERSION_CODES.S
             ) {
-                alarmManager.canScheduleExactAlarms()
+                alarmManager
+                    .canScheduleExactAlarms()
             } else {
                 true
             }
 
         if (canScheduleExact) {
 
-            alarmManager.setExactAndAllowWhileIdle(
-                AlarmManager.RTC_WAKEUP,
-                calendar.timeInMillis,
-                pendingIntent
-            )
+            alarmManager
+                .setExactAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    triggerAtMillis,
+                    pendingIntent
+                )
 
             Log.d(
                 TAG,
-                "Alarma exacta programada: $hour:$minute"
+                "Alarma exacta programada: " +
+                        "$action -> $dateTime"
             )
 
         } else {
 
-            /*
-             * Fallback mientras configuramos
-             * el permiso de alarmas exactas.
-             */
-            alarmManager.setAndAllowWhileIdle(
-                AlarmManager.RTC_WAKEUP,
-                calendar.timeInMillis,
-                pendingIntent
-            )
+            alarmManager
+                .setAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    triggerAtMillis,
+                    pendingIntent
+                )
 
             Log.w(
                 TAG,
-                "Sin permiso exacto. Alarma aproximada: $hour:$minute"
+                "Alarma aproximada programada: " +
+                        "$action -> $dateTime"
             )
         }
     }
