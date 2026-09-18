@@ -21,6 +21,19 @@ val supabaseKey = localProperties.getProperty("SUPABASE_KEY", "")
 val backendUrl = localProperties.getProperty("BACKEND_URL", "")
 val adminPassword = localProperties.getProperty("ADMIN_PASSWORD", "")
 
+val signingProperties = Properties().apply {
+    val signingFile = file(
+        System.getProperty("user.home") +
+            "/.prontotix/signing.properties"
+    )
+
+    if (signingFile.exists()) {
+        signingFile.inputStream().use {
+            load(it)
+        }
+    }
+}
+
 android {
     namespace = "com.luisvicente.prontotix"
     compileSdk = 35
@@ -54,6 +67,41 @@ android {
             "ADMIN_PASSWORD",
             "\"$adminPassword\""
         )
+    }
+
+    signingConfigs {
+        create("release") {
+            storeFile =
+                file(
+                    signingProperties.getProperty(
+                        "storeFile"
+                    )
+                )
+
+            storePassword =
+                signingProperties.getProperty(
+                    "storePassword"
+                )
+
+            keyAlias =
+                signingProperties.getProperty(
+                    "keyAlias"
+                )
+
+            keyPassword =
+                signingProperties.getProperty(
+                    "keyPassword"
+                )
+        }
+    }
+
+    buildTypes {
+        getByName("release") {
+            signingConfig =
+                signingConfigs.getByName("release")
+
+            isMinifyEnabled = false
+        }
     }
 
     buildFeatures {
