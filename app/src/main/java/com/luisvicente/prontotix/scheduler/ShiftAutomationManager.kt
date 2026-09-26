@@ -5,7 +5,6 @@ import android.content.Intent
 import android.util.Log
 import androidx.core.content.ContextCompat
 import com.luisvicente.prontotix.data.local.SessionManager
-import com.luisvicente.prontotix.data.repository.AuthRepository
 import com.luisvicente.prontotix.data.repository.DriverShiftRepository
 import com.luisvicente.prontotix.service.LocationTrackingService
 import kotlinx.coroutines.flow.first
@@ -30,8 +29,17 @@ object ShiftAutomationManager {
         val sessionManager =
             SessionManager(appContext)
 
+        /*
+         * Utilizamos el access token actualmente
+         * almacenado.
+         *
+         * Si el backend responde 401 porque el
+         * token expiró, TokenAuthenticator se
+         * encargará de renovar la sesión y
+         * reintentar automáticamente la petición.
+         */
         val token =
-            getValidAccessToken(
+            getAccessToken(
                 sessionManager
             )
 
@@ -77,7 +85,8 @@ object ShiftAutomationManager {
             }
 
         /*
-         * Si ya estaba activa terminamos aquí.
+         * Si ya existe una jornada activa,
+         * el GPS ya fue iniciado arriba.
          */
         val activeResponse =
             activeShiftResult.getOrNull()
@@ -89,13 +98,28 @@ object ShiftAutomationManager {
         }
 
         /*
-         * Si ni siquiera pudimos consultar
-         * el backend, no iniciamos GPS.
+         * Si no pudimos consultar el backend,
+         * no creamos una jornada a ciegas.
+         *
+         * Esto evita posibles jornadas
+         * duplicadas cuando hay un problema
+         * de Internet o del servidor.
          */
         if (activeResponse == null) {
+
+            Log.e(
+                TAG,
+                "No se iniciará jornada porque no fue posible consultar su estado"
+            )
+
             return
         }
 
+        /*
+         * El backend respondió correctamente
+         * y confirmó que no existe una jornada
+         * activa. Creamos una nueva.
+         */
         shiftRepository
             .startShift(token)
             .onSuccess {
@@ -132,12 +156,12 @@ object ShiftAutomationManager {
             context.applicationContext
 
         /*
-         * PRIMERO detenemos el rastreo.
+         * Primero detenemos el rastreo.
          *
-         * Así garantizamos que después
-         * del fin de jornada no continuemos
-         * enviando coordenadas aunque
-         * el backend tenga algún problema.
+         * Así garantizamos que después del
+         * fin de jornada no continuemos
+         * enviando coordenadas aunque exista
+         * algún problema con el backend.
          */
         stopTracking(
             appContext
@@ -147,7 +171,7 @@ object ShiftAutomationManager {
             SessionManager(appContext)
 
         val token =
-            getValidAccessToken(
+            getAccessToken(
                 sessionManager
             )
 
@@ -206,77 +230,22 @@ object ShiftAutomationManager {
             }
     }
 
-    private suspend fun getValidAccessToken(
+    /*
+     * No renovamos anticipadamente la sesión.
+     *
+     * BackendRetrofitClient utiliza
+     * TokenAuthenticator, que detecta una
+     * respuesta 401, renueva la sesión,
+     * guarda los nuevos tokens y reintenta
+     * automáticamente la petición.
+     */
+    private suspend fun getAccessToken(
         sessionManager: SessionManager
     ): String? {
 
-        val accessToken =
-            sessionManager
-                .accessToken
-                .first()
-
-        val refreshToken =
-            sessionManager
-                .refreshToken
-                .first()
-
-        /*
-         * Si tenemos refresh token,
-         * intentamos renovar siempre antes
-         * de ejecutar la automatización.
-         */
-        if (
-            !refreshToken.isNullOrBlank()
-        ) {
-
-            val authRepository =
-                AuthRepository()
-
-            val refreshResult =
-                authRepository
-                    .refreshSession(
-                        refreshToken
-                    )
-
-            refreshResult
-                .onSuccess { response ->
-
-                    val newAccessToken =
-                        response.access_token
-
-                    if (
-                        !newAccessToken.isNullOrBlank()
-                    ) {
-
-                        sessionManager
-                            .saveSession(
-                                accessToken =
-                                    newAccessToken,
-
-                                refreshToken =
-                                    response.refresh_token
-                                        ?: refreshToken
-                            )
-                    }
-                }
-
-            val refreshed =
-                refreshResult.getOrNull()
-                    ?.access_token
-
-            if (
-                !refreshed.isNullOrBlank()
-            ) {
-                return refreshed
-            }
-        }
-
-        /*
-         * Compatibilidad con las sesiones
-         * antiguas que solamente tienen
-         * access token.
-         */
-        return accessToken
+        return sessionManager
+            .accessToken
+            .first()
     }
 
     private fun startTracking(
