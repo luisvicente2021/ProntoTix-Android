@@ -1,7 +1,7 @@
 package com.luisvicente.prontotix.ui.admin
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,11 +12,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -30,12 +27,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.luisvicente.prontotix.admin.DevicePolicyManagerHelper
+import com.luisvicente.prontotix.data.local.SessionManager
 import com.luisvicente.prontotix.scheduler.ShiftAutomationManager
 import kotlinx.coroutines.launch
-import com.luisvicente.prontotix.admin.MaintenanceModeManager
-import com.luisvicente.prontotix.data.local.SessionManager
-import androidx.compose.foundation.clickable
 
 private val ProntoNavy =
     Color(0xFF0B1930)
@@ -43,17 +37,11 @@ private val ProntoNavy =
 private val ProntoBlue =
     Color(0xFF1677FF)
 
-private val ProntoGreen =
-    Color(0xFF10B981)
-
 private val ProntoBackground =
     Color(0xFFF4F7FB)
 
 private val ProntoDanger =
     Color(0xFFE05252)
-
-private val ProntoText =
-    Color(0xFF12233D)
 
 private val ProntoMuted =
     Color(0xFF64748B)
@@ -71,44 +59,33 @@ fun AdminScreen(
     val scope =
         rememberCoroutineScope()
 
-    val isDeviceOwner =
-        remember {
-            DevicePolicyManagerHelper
-                .isDeviceOwner(context)
-        }
-
-    var maintenanceMode by remember {
-        mutableStateOf(
-            MaintenanceModeManager
-                .isEnabled(context)
-        )
-    }
-
     var actionMessage by remember {
         mutableStateOf<String?>(null)
     }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                ProntoBackground
-            )
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(
+                    ProntoBackground
+                )
     ) {
 
         /*
          * HEADER
          */
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    ProntoNavy
-                )
-                .padding(
-                    horizontal = 16.dp,
-                    vertical = 16.dp
-                ),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .background(
+                        ProntoNavy
+                    )
+                    .padding(
+                        horizontal = 16.dp,
+                        vertical = 16.dp
+                    ),
             verticalAlignment =
                 Alignment.CenterVertically
         ) {
@@ -162,96 +139,15 @@ fun AdminScreen(
         }
 
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(16.dp)
         ) {
 
             /*
-             * ESTADO ADMINISTRACIÓN
+             * CONTROL DE JORNADA
              */
-            Card(
-                modifier =
-                    Modifier.fillMaxWidth(),
-                shape =
-                    RoundedCornerShape(16.dp),
-                colors =
-                    CardDefaults.cardColors(
-                        containerColor =
-                            Color.White
-                    ),
-                elevation =
-                    CardDefaults.cardElevation(
-                        defaultElevation = 2.dp
-                    )
-            ) {
-
-                Column(
-                    modifier =
-                        Modifier.padding(
-                            16.dp
-                        )
-                ) {
-
-                    Text(
-                        text =
-                            "Administración del dispositivo",
-                        color =
-                            ProntoText,
-                        fontWeight =
-                            FontWeight.Bold
-                    )
-
-                    Spacer(
-                        modifier =
-                            Modifier.height(5.dp)
-                    )
-
-                    Text(
-                        text =
-                            if (isDeviceOwner) {
-                                "● Dispositivo administrado"
-                            } else {
-                                "● Administración limitada"
-                            },
-                        color =
-                            if (isDeviceOwner) {
-                                ProntoGreen
-                            } else {
-                                ProntoDanger
-                            },
-                        style =
-                            MaterialTheme
-                                .typography
-                                .bodyMedium
-                    )
-
-                    if (!isDeviceOwner) {
-
-                        Spacer(
-                            modifier =
-                                Modifier.height(5.dp)
-                        )
-
-                        Text(
-                            text =
-                                "ProntoTix todavía no es Device Owner en este teléfono.",
-                            color =
-                                ProntoMuted,
-                            style =
-                                MaterialTheme
-                                    .typography
-                                    .bodySmall
-                        )
-                    }
-                }
-            }
-
-            Spacer(
-                modifier =
-                    Modifier.height(20.dp)
-            )
-
             Text(
                 text =
                     "CONTROL DE JORNADA",
@@ -360,9 +256,12 @@ fun AdminScreen(
                     Modifier.height(22.dp)
             )
 
+            /*
+             * DIAGNÓSTICO
+             */
             Text(
                 text =
-                    "ADMINISTRACIÓN DEL EQUIPO",
+                    "DIAGNÓSTICO",
                 color =
                     ProntoMuted,
                 fontWeight =
@@ -376,120 +275,6 @@ fun AdminScreen(
             Spacer(
                 modifier =
                     Modifier.height(8.dp)
-            )
-
-            /*
-             * MODO MANTENIMIENTO
-             */
-            Card(
-                modifier =
-                    Modifier.fillMaxWidth(),
-                shape =
-                    RoundedCornerShape(16.dp),
-                colors =
-                    CardDefaults.cardColors(
-                        containerColor =
-                            Color.White
-                    ),
-                elevation =
-                    CardDefaults.cardElevation(
-                        defaultElevation = 2.dp
-                    )
-            ) {
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment =
-                        Alignment.CenterVertically
-                ) {
-
-                    Column(
-                        modifier =
-                            Modifier.weight(1f)
-                    ) {
-
-                        Text(
-                            text =
-                                "Modo mantenimiento",
-                            color =
-                                ProntoText,
-                            fontWeight =
-                                FontWeight.Bold
-                        )
-
-                        Text(
-                            text =
-                                if (maintenanceMode) {
-                                    "Restricciones liberadas temporalmente"
-                                } else {
-                                    "Restricciones normales del equipo"
-                                },
-                            color =
-                                ProntoMuted,
-                            style =
-                                MaterialTheme
-                                    .typography
-                                    .bodySmall
-                        )
-                    }
-
-                    Switch(
-                        checked =
-                            maintenanceMode,
-                        enabled =
-                            isDeviceOwner,
-                        onCheckedChange = {
-                                enabled ->
-
-                            val success =
-                                if (enabled) {
-
-                                    DevicePolicyManagerHelper
-                                        .enableMaintenanceMode(
-                                            context
-                                        )
-
-                                } else {
-
-                                    DevicePolicyManagerHelper
-                                        .disableMaintenanceMode(
-                                            context
-                                        )
-                                }
-
-                            if (success) {
-
-                                MaintenanceModeManager
-                                    .setEnabled(
-                                        context,
-                                        enabled
-                                    )
-
-                                maintenanceMode =
-                                    enabled
-
-                                actionMessage =
-                                    if (enabled) {
-                                        "Modo mantenimiento activado"
-                                    } else {
-                                        "Restricciones restauradas"
-                                    }
-
-                            } else {
-
-                                actionMessage =
-                                    "No se pudo cambiar el modo mantenimiento"
-                            }
-                        }
-                    )
-                }
-            }
-
-            Spacer(
-                modifier =
-                    Modifier.height(16.dp)
             )
 
             OutlinedButton(
@@ -523,6 +308,7 @@ fun AdminScreen(
              */
             OutlinedButton(
                 onClick = {
+
                     scope.launch {
 
                         actionMessage =
@@ -544,16 +330,14 @@ fun AdminScreen(
             ) {
 
                 Text(
-                    text = "Cerrar sesión",
-                    color = ProntoDanger,
-                    fontWeight = FontWeight.Bold
+                    text =
+                        "Cerrar sesión",
+                    color =
+                        ProntoDanger,
+                    fontWeight =
+                        FontWeight.Bold
                 )
             }
-
-            Spacer(
-                modifier =
-                    Modifier.height(16.dp)
-            )
 
             actionMessage?.let {
                     message ->

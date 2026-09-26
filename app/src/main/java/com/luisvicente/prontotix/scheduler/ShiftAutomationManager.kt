@@ -4,13 +4,11 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import androidx.core.content.ContextCompat
-import com.luisvicente.prontotix.admin.DevicePolicyManagerHelper
 import com.luisvicente.prontotix.data.local.SessionManager
 import com.luisvicente.prontotix.data.repository.AuthRepository
 import com.luisvicente.prontotix.data.repository.DriverShiftRepository
 import com.luisvicente.prontotix.service.LocationTrackingService
 import kotlinx.coroutines.flow.first
-import com.luisvicente.prontotix.admin.MaintenanceModeManager
 
 object ShiftAutomationManager {
 
@@ -67,13 +65,6 @@ object ShiftAutomationManager {
                     startTracking(
                         appContext
                     )
-
-                } else {
-
-                    /*
-                     * No existe jornada:
-                     * la iniciamos automáticamente.
-                     */
                 }
             }
             .onFailure { error ->
@@ -292,36 +283,6 @@ object ShiftAutomationManager {
         context: Context
     ) {
 
-        /*
-         * Si ProntoTix es Device Owner:
-         *
-         * - encendemos ubicación
-         * - evitamos que se desactive
-         * - concedemos los permisos
-         */
-        val maintenanceMode =
-            MaintenanceModeManager
-                .isEnabled(context)
-
-        if (
-            DevicePolicyManagerHelper
-                .isDeviceOwner(context) &&
-            !maintenanceMode
-        ) {
-
-            DevicePolicyManagerHelper
-                .enforceLocation(context)
-
-            DevicePolicyManagerHelper
-                .lockLocationPermission(context)
-
-            DevicePolicyManagerHelper
-                .enforceWorkDeviceRestrictions(context)
-
-            DevicePolicyManagerHelper
-                .blockAppUninstall(context)
-        }
-
         val intent =
             Intent(
                 context,
@@ -353,21 +314,6 @@ object ShiftAutomationManager {
         context.stopService(
             intent
         )
-
-        /*
-         * Fuera del horario laboral dejamos
-         * de impedir que se configure GPS.
-         */
-        if (
-            DevicePolicyManagerHelper
-                .isDeviceOwner(context)
-        ) {
-
-            DevicePolicyManagerHelper
-                .releaseLocationRestriction(
-                    context
-                )
-        }
 
         Log.i(
             TAG,

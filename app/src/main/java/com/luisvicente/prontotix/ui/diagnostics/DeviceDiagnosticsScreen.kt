@@ -5,6 +5,7 @@ import android.location.LocationManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -31,11 +32,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.luisvicente.prontotix.BuildConfig
-import com.luisvicente.prontotix.admin.DevicePolicyManagerHelper
-import com.luisvicente.prontotix.admin.MaintenanceModeManager
 import com.luisvicente.prontotix.service.TrackingStatusManager
 import kotlinx.coroutines.delay
-import androidx.compose.foundation.clickable
 
 private val ProntoNavy =
     Color(0xFF0B1930)
@@ -81,19 +79,6 @@ fun DeviceDiagnosticsScreen(
         )
     }
 
-    val isDeviceOwner =
-        remember {
-            DevicePolicyManagerHelper
-                .isDeviceOwner(context)
-        }
-
-    var maintenanceMode by remember {
-        mutableStateOf(
-            MaintenanceModeManager
-                .isEnabled(context)
-        )
-    }
-
     /*
      * Actualizamos el diagnóstico
      * automáticamente.
@@ -110,10 +95,6 @@ fun DeviceDiagnosticsScreen(
 
             trackingRunning =
                 TrackingStatusManager.isRunning
-
-            maintenanceMode =
-                MaintenanceModeManager
-                    .isEnabled(context)
 
             delay(2_000)
         }
@@ -259,13 +240,6 @@ fun DeviceDiagnosticsScreen(
                         activeText = "Ejecutándose",
                         inactiveText = "Detenido"
                     )
-
-                    DiagnosticRow(
-                        title = "Device Owner",
-                        active = isDeviceOwner,
-                        activeText = "Activo",
-                        inactiveText = "No configurado"
-                    )
                 }
             }
 
@@ -325,17 +299,6 @@ fun DeviceDiagnosticsScreen(
                         title = "Versión",
                         value =
                             BuildConfig.VERSION_NAME
-                    )
-
-                    InformationRow(
-                        title =
-                            "Modo mantenimiento",
-                        value =
-                            if (maintenanceMode) {
-                                "Activado"
-                            } else {
-                                "Desactivado"
-                            }
                     )
                 }
             }
