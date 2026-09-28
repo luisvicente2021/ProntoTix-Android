@@ -55,6 +55,8 @@ import com.luisvicente.prontotix.R
 import com.luisvicente.prontotix.data.local.SessionManager
 import kotlinx.coroutines.launch
 import com.luisvicente.prontotix.scheduler.ShiftAutomationManager
+import com.luisvicente.prontotix.scheduler.ShiftScheduler
+import com.luisvicente.prontotix.scheduler.StartShiftResult
 import com.luisvicente.prontotix.scheduler.WorkSchedule
 
 @Composable
@@ -169,10 +171,21 @@ fun LoginScreen(
             if (
                 WorkSchedule.isWithinWorkingHours()
             ) {
-                ShiftAutomationManager.startAutomaticShift(
-                    context.applicationContext
-                )
+                val result =
+                    ShiftAutomationManager
+                        .startAutomaticShift(
+                            context.applicationContext
+                        )
+
+                if (result == StartShiftResult.RETRY) {
+                    ShiftScheduler
+                        .scheduleStartRetry(
+                            context = context.applicationContext,
+                            delayMinutes = 1
+                        )
+                }
             }
+
             onLoginSuccess()
         }
     }

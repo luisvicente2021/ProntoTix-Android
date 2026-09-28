@@ -9,6 +9,12 @@ import com.luisvicente.prontotix.data.repository.DriverShiftRepository
 import com.luisvicente.prontotix.service.LocationTrackingService
 import kotlinx.coroutines.flow.first
 
+enum class StartShiftResult {
+    SUCCESS,
+    RETRY,
+    NO_SESSION
+}
+
 object ShiftAutomationManager {
 
     private const val TAG =
@@ -16,7 +22,7 @@ object ShiftAutomationManager {
 
     suspend fun startAutomaticShift(
         context: Context
-    ) {
+    ): StartShiftResult {
 
         Log.i(
             TAG,
@@ -50,7 +56,7 @@ object ShiftAutomationManager {
                 "No existe una sesión válida"
             )
 
-            return
+            return StartShiftResult.NO_SESSION
         }
 
         val shiftRepository =
@@ -59,7 +65,6 @@ object ShiftAutomationManager {
         val activeShiftResult =
             shiftRepository
                 .getActiveShift(token)
-
         activeShiftResult
             .onSuccess { response ->
 
@@ -94,7 +99,7 @@ object ShiftAutomationManager {
         if (
             activeResponse?.active == true
         ) {
-            return
+            return StartShiftResult.SUCCESS
         }
 
         /*
@@ -112,7 +117,7 @@ object ShiftAutomationManager {
                 "No se iniciará jornada porque no fue posible consultar su estado"
             )
 
-            return
+            return StartShiftResult.RETRY
         }
 
         /*
@@ -120,10 +125,13 @@ object ShiftAutomationManager {
          * y confirmó que no existe una jornada
          * activa. Creamos una nueva.
          */
-        shiftRepository
-            .startShift(token)
-            .onSuccess {
 
+        val startShiftResult =
+            shiftRepository
+                .startShift(token)
+
+        return startShiftResult.fold(
+            onSuccess = {
                 Log.i(
                     TAG,
                     "Jornada iniciada automáticamente"
@@ -132,15 +140,19 @@ object ShiftAutomationManager {
                 startTracking(
                     appContext
                 )
-            }
-            .onFailure { error ->
 
+                StartShiftResult.SUCCESS
+            },
+            onFailure = { error ->
                 Log.e(
                     TAG,
                     "Error iniciando jornada automática",
                     error
                 )
+
+                StartShiftResult.RETRY
             }
+        )
     }
 
     suspend fun endAutomaticShift(

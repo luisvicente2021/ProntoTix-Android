@@ -23,6 +23,7 @@ object ShiftScheduler {
 
     private const val START_REQUEST_CODE = 900
     private const val END_REQUEST_CODE = 1830
+    private const val START_RETRY_REQUEST_CODE = 901
 
     fun scheduleDailyShift(
         context: Context
@@ -59,6 +60,27 @@ object ShiftScheduler {
             dateTime = nextEnd,
             action = ACTION_END_SHIFT,
             requestCode = END_REQUEST_CODE
+        )
+    }
+
+    fun scheduleStartRetry(
+        context: Context,
+        delayMinutes: Long = 1
+    ) {
+        val retryTime =
+            LocalDateTime.now()
+                .plusMinutes(delayMinutes)
+
+        scheduleAlarm(
+            context = context.applicationContext,
+            dateTime = retryTime,
+            action = ACTION_START_SHIFT,
+            requestCode = START_RETRY_REQUEST_CODE
+        )
+
+        Log.w(
+            TAG,
+            "Reintento de inicio programado para $retryTime"
         )
     }
 

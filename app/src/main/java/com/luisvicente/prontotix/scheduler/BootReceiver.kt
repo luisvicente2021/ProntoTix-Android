@@ -81,15 +81,41 @@ class BootReceiver : BroadcastReceiver() {
                         "Dentro de jornada. Recuperando seguimiento."
                     )
 
-                    ShiftAutomationManager
-                        .startAutomaticShift(
-                            appContext
-                        )
+                    val result =
+                        ShiftAutomationManager
+                            .startAutomaticShift(
+                                appContext
+                            )
 
-                    Log.i(
-                        TAG,
-                        "Recuperación automática terminada"
-                    )
+                    when (result) {
+
+                        StartShiftResult.SUCCESS -> {
+                            Log.i(
+                                TAG,
+                                "Recuperación automática completada"
+                            )
+                        }
+
+                        StartShiftResult.RETRY -> {
+                            Log.w(
+                                TAG,
+                                "Falló la recuperación. Se programará un reintento."
+                            )
+
+                            ShiftScheduler
+                                .scheduleStartRetry(
+                                    context = appContext,
+                                    delayMinutes = 1
+                                )
+                        }
+
+                        StartShiftResult.NO_SESSION -> {
+                            Log.w(
+                                TAG,
+                                "No existe sesión. No se programará reintento."
+                            )
+                        }
+                    }
 
                 } else {
 

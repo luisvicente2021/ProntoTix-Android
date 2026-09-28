@@ -20,8 +20,15 @@ object BackendRetrofitClient {
 
     private val loggingInterceptor =
         HttpLoggingInterceptor().apply {
+
+            redactHeader("Authorization")
+
             level =
-                HttpLoggingInterceptor.Level.BODY
+                if (BuildConfig.DEBUG) {
+                    HttpLoggingInterceptor.Level.BODY
+                } else {
+                    HttpLoggingInterceptor.Level.NONE
+                }
         }
 
     private val client: OkHttpClient by lazy {

@@ -42,13 +42,53 @@ class ShiftAlarmReceiver :
 
                         Log.i(
                             TAG,
-                            "=== 09:00 INICIO AUTOMÁTICO ==="
+                            "=== INICIO AUTOMÁTICO DE JORNADA ==="
                         )
 
-                        ShiftAutomationManager
-                            .startAutomaticShift(
-                                context
-                            )
+                        val result =
+                            ShiftAutomationManager
+                                .startAutomaticShift(
+                                    context
+                                )
+
+                        when (result) {
+
+                            StartShiftResult.SUCCESS -> {
+                                Log.i(
+                                    TAG,
+                                    "Inicio automático completado correctamente"
+                                )
+                            }
+
+                            StartShiftResult.RETRY -> {
+                                if (WorkSchedule.isWithinWorkingHours()) {
+
+                                    Log.w(
+                                        TAG,
+                                        "Fallo temporal. Se programará un reintento."
+                                    )
+
+                                    ShiftScheduler
+                                        .scheduleStartRetry(
+                                            context = context.applicationContext,
+                                            delayMinutes = 1
+                                        )
+
+                                } else {
+                                    Log.w(
+                                        TAG,
+                                        "Falló el inicio, pero ya estamos fuera del horario laboral."
+                                    )
+                                }
+                            }
+
+                            StartShiftResult.NO_SESSION -> {
+                                Log.w(
+                                    TAG,
+                                    "No existe sesión. No se programará reintento."
+                                )
+                            }
+                        }
                     }
 
                     ShiftScheduler
